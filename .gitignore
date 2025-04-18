@@ -1,0 +1,15 @@
+# State and runtime files
+xu_state.json
+xu_mempool.json
+xu_nonce.json
+xu_blocks.log
+tx.json
+
+# Misc
+protocol.txt
+
+# IDE/Editor junk
+.DS_Store
+.idea/
+.vscode/
+*.swp
