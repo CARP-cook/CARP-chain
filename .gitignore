@@ -4,6 +4,8 @@ xu_mempool.json
 xu_nonce.json
 xu_blocks.log
 tx.json
+wrapped_multi.json
+*.json
 
 # Misc
 protocol.txt
