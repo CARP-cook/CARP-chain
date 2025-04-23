@@ -3,8 +3,12 @@ xu_state.json
 xu_mempool.json
 xu_nonce.json
 xu_blocks.log
+
+# Explicit tx JSONs
 tx.json
 wrapped_multi.json
+
+# Ignore all other JSONs
 *.json
 
 # Misc
