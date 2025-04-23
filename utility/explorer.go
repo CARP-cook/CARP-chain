@@ -15,6 +15,7 @@ type Block struct {
 	Height    int            `json:"height"`
 	Timestamp string         `json:"timestamp"`
 	Txs       []app.SignedTx `json:"txs"`
+	BlockHash string         `json:"blockhash"`
 }
 
 func main() {
@@ -46,22 +47,93 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 	<head>
 	  <meta charset="UTF-8">
 	  <title>XuChain Explorer</title>
-	  <style>body{font-family:sans-serif} .tx{margin-left:1em}</style>
+	  <style>
+	    body { font-family: sans-serif; }
+	    .tx { margin-left: 2em; cursor: pointer; color: blue; text-decoration: underline; }
+	    .details { display: none; margin-left: 3em; font-size: 0.9em; }
+	    .highlight { background-color: #ffeeba; }
+	    .pagination { margin-top: 1em; }
+	    .pagination button { margin-right: 0.5em; }
+	    #searchInput { width: 300px; margin-bottom: 1em; padding: 0.4em; }
+	  </style>
+	  <script>
+	    let currentPage = 0;
+	    let blocksPerPage = 10;
+	    let totalBlocks = 0;
+	
+	    function toggleDetails(id) {
+	      const el = document.getElementById(id);
+	      el.style.display = el.style.display === "none" ? "block" : "none";
+	    }
+	
+	    function showPage(page) {
+	      const all = document.querySelectorAll('.block');
+	      for (let i = 0; i < all.length; i++) {
+	        all[i].style.display = (i >= page * blocksPerPage && i < (page + 1) * blocksPerPage) ? "block" : "none";
+	      }
+	      currentPage = page;
+	      updateButtons();
+	    }
+	
+	    function updateButtons() {
+	      document.getElementById("prevBtn").disabled = currentPage === 0;
+	      document.getElementById("nextBtn").disabled = ((currentPage + 1) * blocksPerPage) >= totalBlocks;
+	    }
+	
+	    function searchTxs() {
+	      const query = document.getElementById("searchInput").value.toLowerCase();
+	      const blocks = document.querySelectorAll(".block");
+
+	      blocks.forEach(block => {
+	        const blockText = block.textContent.toLowerCase();
+	        const match = blockText.includes(query);
+	        block.style.display = match ? "block" : "none";
+
+	        const txDivs = block.querySelectorAll(".tx, .details");
+	        txDivs.forEach(div => {
+	          div.style.display = match ? "block" : "none";
+	        });
+	      });
+	    }
+	
+	    window.onload = () => {
+	      totalBlocks = document.querySelectorAll('.block').length;
+	      showPage(0);
+	    };
+	  </script>
 	</head>
 	<body>
 	  <h1>🧾 XuChain Block Explorer</h1>
-	  {{range .}}
-	    <h3>🔗 Block {{.Height}} – {{.Timestamp}}</h3>
-	    {{range .Txs}}
-	      <div class="tx">
-	        ↪ <b>{{.Tx.Type}}</b>: {{.Tx.Amount}} Xu from <code>{{.Tx.From}}</code> → <code>{{.Tx.To}}</code> (Nonce: {{.Tx.Nonce}})
-	      </div>
-	    {{end}}
+	  <input type="text" id="searchInput" onkeyup="searchTxs()" placeholder="🔍 Search transactions..." />
+	  {{range $i, $block := .}}
+	    <div class="block {{if eq $i 0}}highlight{{end}}">
+	      <h3>🔗 Block {{$block.Height}} – {{$block.Timestamp}} – <code>{{$block.BlockHash}}</code></h3>
+	      {{range $j, $tx := $block.Txs}}
+	        <div class="tx" onclick="toggleDetails('tx-{{$block.Height}}-{{$j}}')">
+	          ↪ TX: <code>{{$tx.Tx.Hash}}</code>
+	        </div>
+	        <div class="details" id="tx-{{$block.Height}}-{{$j}}">
+	          <div>Type: {{$tx.Tx.Type}}</div>
+	          <div>Amount: {{$tx.Tx.Amount}}</div>
+	          <div>From: <code>{{$tx.Tx.From}}</code></div>
+	          <div>To: <code>{{$tx.Tx.To}}</code></div>
+	          <div>Nonce: {{$tx.Tx.Nonce}}</div>
+	        </div>
+	      {{end}}
+	    </div>
 	  {{end}}
+	  <div class="pagination">
+	    <button id="prevBtn" onclick="showPage(currentPage - 1)">⬅️ Previous</button>
+	    <button id="nextBtn" onclick="showPage(currentPage + 1)">Next ➡️</button>
+	  </div>
 	</body>
 	</html>`
 	t := template.Must(template.New("html").Parse(tmpl))
 	blocks := loadBlocks()
+	// Reverse blocks to show the newest block first
+	for i, j := 0, len(blocks)-1; i < j; i, j = i+1, j-1 {
+		blocks[i], blocks[j] = blocks[j], blocks[i]
+	}
 	t.Execute(w, blocks)
 }
 

@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -11,7 +12,10 @@ import (
 	"net/http"
 	"os"
 	"sync"
+
 	"xu/app"
+
+	"github.com/joho/godotenv"
 )
 
 var xuApp *app.XuApp
@@ -20,16 +24,22 @@ var mempoolMu sync.Mutex
 
 const mempoolFile = "xu_mempool.json"
 
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Println("⚠️ No .env file found – falling back to system env")
+	}
+}
+
 func main() {
 	xuApp = app.NewXuApp()
-	loadMempool()
 
 	http.HandleFunc("/balance", withCORS(handleBalance))
 	http.HandleFunc("/nonce", withCORS(handleNonce))
 	http.HandleFunc("/send", withCORS(handleSendToMempool))
-	http.HandleFunc("/faucet", withCORS(handleFaucet))
 	http.HandleFunc("/mempool", withCORS(handleMempool))
 	http.HandleFunc("/blocks", withCORS(handleBlocks))
+	http.HandleFunc("/send-multi", withCORS(handleMultiSendToMempool))
 
 	fmt.Println("🌐 XuChain API running at http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -54,7 +64,7 @@ func handleBalance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid address", http.StatusBadRequest)
 		return
 	}
-	freshApp := app.NewXuApp() // always reload
+	freshApp := app.NewXuApp()
 	bal := freshApp.GetBalance(addr)
 	json.NewEncoder(w).Encode(map[string]interface{}{"address": addr, "balance": bal})
 }
@@ -65,7 +75,7 @@ func handleNonce(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid address", http.StatusBadRequest)
 		return
 	}
-	freshApp := app.NewXuApp() // always reload
+	freshApp := app.NewXuApp()
 	nonce := freshApp.GetNonce(addr)
 	json.NewEncoder(w).Encode(map[string]interface{}{"address": addr, "nonce": nonce})
 }
@@ -76,48 +86,58 @@ func handleSendToMempool(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to read body", http.StatusBadRequest)
 		return
 	}
+
 	var tx app.SignedTx
 	if err := json.Unmarshal(body, &tx); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-	txBytes, _ := json.Marshal(tx.Tx)
-	pubKeyBytes, err := base64Decode(tx.PubKey)
-	if err != nil || !app.VerifySignature(txBytes, tx.Signature, pubKeyBytes) {
+	pubKeyBytes, err := base64.StdEncoding.DecodeString(tx.PubKey)
+	if err != nil || len(pubKeyBytes) != ed25519.PublicKeySize {
+		http.Error(w, "Invalid public key", http.StatusBadRequest)
+		return
+	}
+	if !app.VerifyCanonicalSignature(tx.Tx, tx.Signature, pubKeyBytes) {
 		http.Error(w, "Invalid signature", http.StatusBadRequest)
 		return
 	}
-	mempoolMu.Lock()
-	mempool = append(mempool, tx)
-	saveMempool()
-	mempoolMu.Unlock()
-	w.Write([]byte("📝 TX added to mempool"))
-}
 
-func handleFaucet(w http.ResponseWriter, r *http.Request) {
-	addr := r.URL.Query().Get("addr")
-	if !app.IsValidAddress(addr) {
-		http.Error(w, "Invalid address", http.StatusBadRequest)
+	adminPubKey := os.Getenv("XU_ADMIN_PUBKEY")
+	if tx.Tx.Type == "mint" && tx.PubKey != adminPubKey {
+		http.Error(w, "Unauthorized: only admin can mint", http.StatusForbidden)
 		return
 	}
-	tx := app.Tx{
-		Type:   "mint",
-		To:     addr,
-		Amount: 100,
+
+	mempoolMu.Lock()
+	if tx.Tx.Hash == "" {
+		tx.Tx.Hash = app.ComputeTxHash(tx.Tx)
 	}
-	res, err := xuApp.ApplyTx(tx)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	defer mempoolMu.Unlock()
+
+	// 🧠 Neue Version liest die Datei → aktualisiert → schreibt zurück
+	var mempool []app.SignedTx
+	if raw, err := os.ReadFile(mempoolFile); err == nil {
+		json.Unmarshal(raw, &mempool)
 	}
-	xuApp.SaveState()
-	w.Write(res)
+	mempool = append(mempool, tx)
+
+	data, _ := json.MarshalIndent(mempool, "", "  ")
+	os.WriteFile(mempoolFile, data, 0644)
+
+	w.Write([]byte("📝 TX added to mempool"))
 }
 
 func handleMempool(w http.ResponseWriter, r *http.Request) {
 	mempoolMu.Lock()
 	defer mempoolMu.Unlock()
-	json.NewEncoder(w).Encode(mempool)
+
+	raw, err := os.ReadFile(mempoolFile)
+	if err != nil {
+		http.Error(w, "Mempool not available", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(raw)
 }
 
 func handleBlocks(w http.ResponseWriter, r *http.Request) {
@@ -140,18 +160,55 @@ func handleBlocks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(blocks)
 }
 
-func saveMempool() {
-	data, _ := json.MarshalIndent(mempool, "", "  ")
-	os.WriteFile(mempoolFile, data, 0644)
-}
+func handleMultiSendToMempool(w http.ResponseWriter, r *http.Request) {
+	type MultiPayload struct {
+		Txs []app.SignedTx `json:"txs"`
+	}
 
-func loadMempool() {
+	var payload MultiPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	adminPubKey := os.Getenv("XU_ADMIN_PUBKEY")
+
+	mempoolMu.Lock()
+	defer mempoolMu.Unlock()
+
+	var mempool []app.SignedTx
 	if raw, err := os.ReadFile(mempoolFile); err == nil {
 		json.Unmarshal(raw, &mempool)
 	}
-}
 
-func base64Decode(s string) ([]byte, error) {
-	return base64.StdEncoding.DecodeString(s)
-}
+	var results []string
 
+	for i, tx := range payload.Txs {
+		pubKeyBytes, err := base64.StdEncoding.DecodeString(tx.PubKey)
+		if err != nil || len(pubKeyBytes) != ed25519.PublicKeySize {
+			results = append(results, fmt.Sprintf("tx[%d]: invalid pubkey", i))
+			continue
+		}
+		if !app.VerifyCanonicalSignature(tx.Tx, tx.Signature, pubKeyBytes) {
+			results = append(results, fmt.Sprintf("tx[%d]: invalid signature", i))
+			continue
+		}
+		if tx.Tx.Type == "mint" && tx.PubKey != adminPubKey {
+			results = append(results, fmt.Sprintf("tx[%d]: unauthorized mint", i))
+			continue
+		}
+		if tx.Tx.Hash == "" {
+			tx.Tx.Hash = app.ComputeTxHash(tx.Tx)
+		}
+		mempool = append(mempool, tx)
+		results = append(results, fmt.Sprintf("tx[%d]: accepted", i))
+	}
+
+	data, _ := json.MarshalIndent(mempool, "", "  ")
+	os.WriteFile(mempoolFile, data, 0644)
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "ok",
+		"results": results,
+	})
+}

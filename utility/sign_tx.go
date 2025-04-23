@@ -1,4 +1,3 @@
-// sign_tx.go – CLI tool to sign XuChain transactions with nonce, address validation & auto-nonce
 package main
 
 import (
@@ -8,13 +7,8 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"path/filepath"
-	"io/ioutil"
-
 	"xu/app"
 )
-
-const nonceFile = "xu_nonce.json"
 
 func main() {
 	// CLI flags
@@ -39,12 +33,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Calculate nonce if not set
-	useNonce := *nonce
-	if useNonce == 0 {
-		useNonce = loadAndIncrementNonce(*from)
-	}
-
 	// Decode private key
 	priv, err := base64.StdEncoding.DecodeString(*privkeyB64)
 	if err != nil || len(priv) != 64 {
@@ -54,6 +42,14 @@ func main() {
 	pub := priv[32:]
 	pubB64 := base64.StdEncoding.EncodeToString(pub)
 
+	// Load current nonce from app state
+	useNonce := *nonce
+	if useNonce == 0 {
+		xuApp := app.NewXuApp()
+		current := xuApp.GetNonce(*from)
+		useNonce = current + 1
+	}
+
 	// Create transaction
 	tx := app.Tx{
 		Type:   "transfer",
@@ -62,13 +58,21 @@ func main() {
 		Amount: *amount,
 		Nonce:  useNonce,
 	}
-	txBytes, _ := json.Marshal(tx)
-	sig := app.Sign(txBytes, priv)
+
+	// Compute and assign canonical hash
+	tx.Hash = app.ComputeTxHash(tx)
+
+	// Sign using CanonicalJSON
+	sig, err := app.SignCanonical(tx, priv)
+	if err != nil {
+		fmt.Println("❌ Failed to sign transaction:", err)
+		os.Exit(1)
+	}
 
 	// Create signed transaction
 	signed := app.SignedTx{
-		Tx:       tx,
-		PubKey:   pubB64,
+		Tx:        tx,
+		PubKey:    pubB64,
 		Signature: sig,
 	}
 
@@ -80,22 +84,4 @@ func main() {
 func isValidAddress(addr string) bool {
 	matched, _ := regexp.MatchString(`^Xu[a-f0-9]{10}$`, addr)
 	return matched
-}
-
-func loadAndIncrementNonce(address string) uint64 {
-	// Read file (or initialize map)
-	nonces := map[string]uint64{}
-	path := filepath.Join(".", nonceFile)
-	if data, err := ioutil.ReadFile(path); err == nil {
-		json.Unmarshal(data, &nonces)
-	}
-
-	// Increment nonce
-	n := nonces[address] + 1
-	nonces[address] = n
-
-	// Save updated nonces
-	out, _ := json.MarshalIndent(nonces, "", "  ")
-	ioutil.WriteFile(path, out, 0644)
-	return n
 }

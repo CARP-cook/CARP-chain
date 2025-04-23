@@ -8,7 +8,7 @@ import (
 
 const (
 	genesisAddr  = "Xueee0442cce"
-	genesisFunds = 1000
+	genesisFunds = 10000
 )
 
 func main() {

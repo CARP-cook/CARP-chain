@@ -7,6 +7,7 @@ tx.json
 
 # Misc
 protocol.txt
+.env
 
 # IDE/Editor junk
 .DS_Store
