@@ -11,6 +11,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"strconv"
 	"sync"
 
 	"xu/app"
@@ -40,6 +42,7 @@ func main() {
 	http.HandleFunc("/mempool", withCORS(handleMempool))
 	http.HandleFunc("/blocks", withCORS(handleBlocks))
 	http.HandleFunc("/send-multi", withCORS(handleMultiSendToMempool))
+	http.HandleFunc("/redeem-veco", withCORS(handleRedeemVeco))
 
 	fmt.Println("🌐 XuChain API running at http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -211,4 +214,143 @@ func handleMultiSendToMempool(w http.ResponseWriter, r *http.Request) {
 		"status":  "ok",
 		"results": results,
 	})
+}
+
+func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
+	type RedeemRequest struct {
+		AmountXu    int64  `json:"amount_xu"`
+		XuAddress   string `json:"xu_address"`
+		VecoAddress string `json:"veco_address"`
+		Signature   string `json:"signature"`
+		PubKey      string `json:"pubkey"`
+	}
+
+	var req RedeemRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	if !app.IsValidAddress(req.XuAddress) {
+		http.Error(w, "Invalid Xu address", http.StatusBadRequest)
+		return
+	}
+
+	// Decode public key
+	pubKeyBytes, err := base64.StdEncoding.DecodeString(req.PubKey)
+	if err != nil || len(pubKeyBytes) != ed25519.PublicKeySize {
+		http.Error(w, "Invalid public key", http.StatusBadRequest)
+		return
+	}
+
+	// Verify signature
+	message := fmt.Sprintf("%d|%s|%s", req.AmountXu, req.XuAddress, req.VecoAddress)
+	if !ed25519.Verify(pubKeyBytes, []byte(message), mustDecodeB64(req.Signature)) {
+		http.Error(w, "Invalid signature", http.StatusBadRequest)
+		return
+	}
+
+	// Validate Veco address
+	validateCmd := exec.Command("veco-cli", "validateaddress", req.VecoAddress)
+	validateOutput, err := validateCmd.CombinedOutput()
+	if err != nil {
+		log.Println("Veco validateaddress error:", string(validateOutput))
+		http.Error(w, "Failed to validate Veco address", http.StatusInternalServerError)
+		return
+	}
+	var validationResult map[string]interface{}
+	if err := json.Unmarshal(validateOutput, &validationResult); err != nil {
+		http.Error(w, "Invalid response from validateaddress", http.StatusInternalServerError)
+		return
+	}
+	if valid, ok := validationResult["isvalid"].(bool); !ok || !valid {
+		http.Error(w, "Invalid Veco address", http.StatusBadRequest)
+		return
+	}
+
+	// Check Xu balance
+	freshApp := app.NewXuApp()
+	currentBalance := freshApp.GetBalance(req.XuAddress)
+	if currentBalance < req.AmountXu {
+		http.Error(w, "Insufficient Xu balance", http.StatusPaymentRequired)
+		return
+	}
+
+	// Load quote from environment
+	quoteStr := os.Getenv("XU_REDEEM_QUOTE")
+	if quoteStr == "" {
+		quoteStr = "1000" // Default 1000 Xu = 1 Veco
+	}
+	quote, err := strconv.ParseFloat(quoteStr, 64)
+	if err != nil || quote <= 0 {
+		http.Error(w, "Invalid redeem quote", http.StatusInternalServerError)
+		return
+	}
+
+	// Calculate Veco amount
+	vecoAmount := float64(req.AmountXu) / quote
+
+	// Check available Veco balance
+	balanceCmd := exec.Command("veco-cli", "getbalance")
+	balanceOutput, err := balanceCmd.CombinedOutput()
+	if err != nil {
+		log.Println("Veco getbalance error:", string(balanceOutput))
+		http.Error(w, "Failed to check Veco balance", http.StatusInternalServerError)
+		return
+	}
+	vecoBalance, err := strconv.ParseFloat(string(bytes.TrimSpace(balanceOutput)), 64)
+	if err != nil {
+		http.Error(w, "Invalid Veco balance format", http.StatusInternalServerError)
+		return
+	}
+	if vecoBalance < vecoAmount {
+		http.Error(w, fmt.Sprintf("Insufficient Veco balance: available %.8f, needed %.8f", vecoBalance, vecoAmount), http.StatusPaymentRequired)
+		return
+	}
+
+	// Send Veco
+	sendCmd := exec.Command("veco-cli", "sendtoaddress", req.VecoAddress, fmt.Sprintf("%.8f", vecoAmount))
+	sendOutput, err := sendCmd.CombinedOutput()
+	if err != nil {
+		log.Println("Veco send error:", string(sendOutput))
+		http.Error(w, "Failed to send Veco coins", http.StatusInternalServerError)
+		return
+	}
+
+	// Burn Xu by sending to XuBurn0x000
+	tx := app.Tx{
+		Type:   "transfer",
+		From:   req.XuAddress,
+		To:     "XuBurn0x000",
+		Amount: req.AmountXu,
+		Nonce:  freshApp.GetNonce(req.XuAddress) + 1,
+	}
+	tx.Hash = app.ComputeTxHash(tx)
+	canon := app.MustCanonicalJSON(tx)
+	signature := ed25519.Sign(pubKeyBytes, canon)
+
+	signedTx := app.SignedTx{
+		Tx:        tx,
+		PubKey:    base64.StdEncoding.EncodeToString(pubKeyBytes),
+		Signature: base64.StdEncoding.EncodeToString(signature),
+	}
+
+	mempoolMu.Lock()
+	defer mempoolMu.Unlock()
+
+	var mempool []app.SignedTx
+	if raw, err := os.ReadFile(mempoolFile); err == nil {
+		json.Unmarshal(raw, &mempool)
+	}
+	mempool = append(mempool, signedTx)
+
+	data, _ := json.MarshalIndent(mempool, "", "  ")
+	os.WriteFile(mempoolFile, data, 0644)
+
+	w.Write([]byte(fmt.Sprintf("✅ Redeem successful: sent %.8f Veco and burned %d Xu", vecoAmount, req.AmountXu)))
+}
+
+func mustDecodeB64(s string) []byte {
+	b, _ := base64.StdEncoding.DecodeString(s)
+	return b
 }
