@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -107,17 +108,24 @@ func (a *XuApp) ApplyTx(tx Tx) ([]byte, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	switch tx.Type {
-	case "mint":
+	switch {
+	case tx.Type == "mint":
 		a.wallet[tx.To] += tx.Amount
 		return []byte(fmt.Sprintf("minted %d Xu to %s", tx.Amount, tx.To)), nil
-	case "transfer":
+	case tx.Type == "transfer":
 		if a.wallet[tx.From] < tx.Amount {
 			return nil, fmt.Errorf("insufficient balance")
 		}
 		a.wallet[tx.From] -= tx.Amount
 		a.wallet[tx.To] += tx.Amount
 		return []byte(fmt.Sprintf("transferred %d Xu from %s to %s", tx.Amount, tx.From, tx.To)), nil
+	case strings.HasPrefix(tx.Type, "redeem:"):
+		if a.wallet[tx.From] < tx.Amount {
+			return nil, fmt.Errorf("insufficient balance")
+		}
+		a.wallet[tx.From] -= tx.Amount
+		a.wallet[tx.To] += tx.Amount
+		return []byte(fmt.Sprintf("redeemed %d Xu from %s to %s (redeem target %s)", tx.Amount, tx.From, tx.To, tx.Type[7:])), nil
 	default:
 		return nil, fmt.Errorf("unknown tx type")
 	}
