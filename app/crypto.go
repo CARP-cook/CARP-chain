@@ -1,4 +1,4 @@
-// crypto.go – XuChain cryptographic utilities (key generation, signing, verification)
+// crypto.go – CARP Chain cryptographic utilities (key generation, signing, verification)
 package app
 
 import (
@@ -18,10 +18,10 @@ func GenerateKeyPair() (ed25519.PublicKey, ed25519.PrivateKey) {
 	return pub, priv
 }
 
-// PublicKeyToAddress generates a Xu address from the given public key.
+// PublicKeyToAddress generates a CARP address from the given public key.
 func PublicKeyToAddress(pub ed25519.PublicKey) string {
 	h := sha256.Sum256(pub)
-	return "Xu" + hex.EncodeToString(h[:])[:10] // short address prefix
+	return "Ca" + hex.EncodeToString(h[:])[:10] // short address prefix
 }
 
 // Sign signs the given transaction bytes with the provided private key and returns a base64-encoded signature.

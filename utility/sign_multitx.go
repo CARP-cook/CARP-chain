@@ -1,14 +1,14 @@
-// sign_multitx.go – CLI tool to create and sign multiple XuChain transactions in one batch
+// sign_multitx.go – CLI tool to create and sign multiple CARP Chain transactions in one batch
 package main
 
 import (
+	"carp/app"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
-	"xu/app"
 )
 
 type Transfer struct {
@@ -23,11 +23,11 @@ func main() {
 	file := flag.String("file", "", "JSON file with array of {to, amount}")
 	flag.Parse()
 
-	xuApp := app.NewXuApp()
+	carpApp := app.NewCarpApp()
 
 	useNonceStart := *nonceStartFlag
 	if useNonceStart == 0 {
-		current := xuApp.GetNonce(*fromAddr)
+		current := carpApp.GetNonce(*fromAddr)
 		useNonceStart = current + 1
 	}
 

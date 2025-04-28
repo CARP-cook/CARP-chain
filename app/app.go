@@ -1,4 +1,4 @@
-// app.go – XuChain application logic with address validation, nonce protection, persistence, and balance access
+// app.go – CARP Chain application logic with address validation, nonce protection, persistence, and balance access
 package app
 
 import (
@@ -29,14 +29,14 @@ type Tx struct {
 	Hash   string `json:"hash"`
 }
 
-type XuApp struct {
+type CarpApp struct {
 	mu     sync.Mutex
 	wallet map[string]int64
 	nonces map[string]uint64 // nonces[address] = last used nonce
 }
 
-func NewXuApp() *XuApp {
-	app := &XuApp{
+func NewCarpApp() *CarpApp {
+	app := &CarpApp{
 		wallet: make(map[string]int64),
 		nonces: make(map[string]uint64),
 	}
@@ -45,7 +45,7 @@ func NewXuApp() *XuApp {
 }
 
 // ApplySignedTxJSON validates and applies a signed transaction
-func (a *XuApp) ApplySignedTxJSON(s SignedTx) ([]byte, error) {
+func (a *CarpApp) ApplySignedTxJSON(s SignedTx) ([]byte, error) {
 	txBytes, err := CanonicalJSON(s.Tx)
 	if err != nil {
 		return nil, errors.New("failed to marshal tx")
@@ -104,28 +104,28 @@ func (a *XuApp) ApplySignedTxJSON(s SignedTx) ([]byte, error) {
 }
 
 // ApplyTx applies a basic (unsigned) transaction
-func (a *XuApp) ApplyTx(tx Tx) ([]byte, error) {
+func (a *CarpApp) ApplyTx(tx Tx) ([]byte, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
 	switch {
 	case tx.Type == "mint":
 		a.wallet[tx.To] += tx.Amount
-		return []byte(fmt.Sprintf("minted %d Xu to %s", tx.Amount, tx.To)), nil
+		return []byte(fmt.Sprintf("minted %d CARP to %s", tx.Amount, tx.To)), nil
 	case tx.Type == "transfer":
 		if a.wallet[tx.From] < tx.Amount {
 			return nil, fmt.Errorf("insufficient balance")
 		}
 		a.wallet[tx.From] -= tx.Amount
 		a.wallet[tx.To] += tx.Amount
-		return []byte(fmt.Sprintf("transferred %d Xu from %s to %s", tx.Amount, tx.From, tx.To)), nil
+		return []byte(fmt.Sprintf("transferred %d CARP from %s to %s", tx.Amount, tx.From, tx.To)), nil
 	case strings.HasPrefix(tx.Type, "redeem:"):
 		if a.wallet[tx.From] < tx.Amount {
 			return nil, fmt.Errorf("insufficient balance")
 		}
 		a.wallet[tx.From] -= tx.Amount
 		a.wallet[tx.To] += tx.Amount
-		return []byte(fmt.Sprintf("redeemed %d Xu from %s to %s (redeem target %s)", tx.Amount, tx.From, tx.To, tx.Type[7:])), nil
+		return []byte(fmt.Sprintf("redeemed %d CARP from %s to %s (redeem target %s)", tx.Amount, tx.From, tx.To, tx.Type[7:])), nil
 	default:
 		return nil, fmt.Errorf("unknown tx type")
 	}
@@ -135,27 +135,27 @@ func decodeBase64(s string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(s)
 }
 
-// IsValidAddress checks if the address matches the expected Xu format
+// IsValidAddress checks if the address matches the expected CARP format
 func IsValidAddress(addr string) bool {
-	matched, _ := regexp.MatchString(`^Xu[a-f0-9]{10}$`, addr)
+	matched, _ := regexp.MatchString(`^Ca[a-f0-9]{10}$`, addr)
 	return matched
 }
 
-func (a *XuApp) SaveState() {
+func (a *CarpApp) SaveState() {
 	data := map[string]interface{}{
 		"wallet": a.wallet,
 		"nonces": a.nonces,
 	}
 	jsonData, _ := json.MarshalIndent(data, "", "  ")
-	os.WriteFile("xu_state.json", jsonData, 0644)
+	os.WriteFile("carp_state.json", jsonData, 0644)
 }
 
-func (a *XuApp) LoadState() {
+func (a *CarpApp) LoadState() {
 	a.loadState()
 }
 
-func (a *XuApp) loadState() {
-	if raw, err := os.ReadFile("xu_state.json"); err == nil {
+func (a *CarpApp) loadState() {
+	if raw, err := os.ReadFile("carp_state.json"); err == nil {
 		var data map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &data); err == nil {
 			json.Unmarshal(data["wallet"], &a.wallet)
@@ -165,14 +165,14 @@ func (a *XuApp) loadState() {
 }
 
 // GetBalance returns the current balance of an address
-func (a *XuApp) GetBalance(addr string) int64 {
+func (a *CarpApp) GetBalance(addr string) int64 {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.wallet[addr]
 }
 
 // GetNonce returns the last used nonce of an address
-func (a *XuApp) GetNonce(addr string) uint64 {
+func (a *CarpApp) GetNonce(addr string) uint64 {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.nonces[addr]

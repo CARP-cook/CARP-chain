@@ -1,4 +1,4 @@
-// snapshot_uploader.go – Upload xu_blocks.log.gz snapshot to GitHub
+// snapshot_uploader.go – Upload carp_blocks.log.gz snapshot to GitHub
 package main
 
 import (
@@ -29,7 +29,7 @@ type GitHubResponse struct {
 const (
 	repoOwner = "tedydet"
 	repoName  = "xu-chain-backup-test"
-	filePath  = "xu_blocks.log.gz" // compressed snapshot
+	filePath  = "carp_blocks.log.gz" // compressed snapshot
 	branch    = "main"
 )
 
@@ -40,7 +40,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	compressedData, err := compressFile("xu_blocks.log")
+	compressedData, err := compressFile("carp_blocks.log")
 	if err != nil {
 		fmt.Println("❌ Compression failed:", err)
 		os.Exit(1)

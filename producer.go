@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"carp/app"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -11,7 +12,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-	"xu/app"
 
 	"github.com/joho/godotenv"
 )
@@ -21,18 +21,18 @@ func init() {
 }
 
 const (
-	mempoolFile = "xu_mempool.json"
-	blocksFile  = "xu_blocks.log"
+	mempoolFile = "carp_mempool.json"
+	blocksFile  = "carp_blocks.log"
 )
 
 func main() {
-	xuApp := app.NewXuApp()
+	carpApp := app.NewCarpApp()
 
 	// 🔐 Decode admin pubkey from base64
-	adminPubKeyB64 := os.Getenv("XU_ADMIN_PUBKEY")
+	adminPubKeyB64 := os.Getenv("CARP_ADMIN_PUBKEY")
 	adminPubKey, err := base64.StdEncoding.DecodeString(adminPubKeyB64)
 	if err != nil || len(adminPubKey) != 32 {
-		fmt.Println("❌ Invalid XU_ADMIN_PUBKEY in .env")
+		fmt.Println("❌ Invalid CARP_ADMIN_PUBKEY in .env")
 		os.Exit(1)
 	}
 
@@ -70,8 +70,8 @@ func main() {
 			// Set hash for the transaction
 			tx.Tx.Hash = app.ComputeTxHash(tx.Tx)
 
-			// ✅ TX anwenden
-			res, err := xuApp.ApplySignedTxJSON(tx)
+			// apply tx
+			res, err := carpApp.ApplySignedTxJSON(tx)
 			if err != nil {
 				fmt.Println("🚫 TX error:", err)
 				continue
@@ -82,7 +82,7 @@ func main() {
 		}
 
 		if len(accepted) > 0 {
-			xuApp.SaveState()
+			carpApp.SaveState()
 			appendBlockToLog(blockHeight, accepted)
 			blockHeight++
 		}

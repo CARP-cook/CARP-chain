@@ -1,20 +1,20 @@
 package main
 
 import (
+	"carp/app"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"regexp"
-	"xu/app"
 )
 
 func main() {
 	// CLI flags
 	from := flag.String("from", "", "Sender address")
 	to := flag.String("to", "", "Recipient address")
-	amount := flag.Int64("amount", 0, "Amount (Xu)")
+	amount := flag.Int64("amount", 0, "Amount (CARP)")
 	nonce := flag.Uint64("nonce", 0, "Optional: explicit nonce value")
 	privkeyB64 := flag.String("priv", "", "Base64-encoded private key")
 	flag.Parse()
@@ -45,8 +45,8 @@ func main() {
 	// Load current nonce from app state
 	useNonce := *nonce
 	if useNonce == 0 {
-		xuApp := app.NewXuApp()
-		current := xuApp.GetNonce(*from)
+		carpApp := app.NewCarpApp()
+		current := carpApp.GetNonce(*from)
 		useNonce = current + 1
 	}
 
@@ -82,6 +82,6 @@ func main() {
 }
 
 func isValidAddress(addr string) bool {
-	matched, _ := regexp.MatchString(`^Xu[a-f0-9]{10}$`, addr)
+	matched, _ := regexp.MatchString(`^Ca[a-f0-9]{10}$`, addr)
 	return matched
 }

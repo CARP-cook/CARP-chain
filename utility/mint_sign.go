@@ -2,22 +2,22 @@
 package main
 
 import (
+	"carp/app"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
-	"xu/app"
 )
 
 func main() {
-	addr := flag.String("addr", "", "Target address (e.g. Xuabcd123456)")
+	addr := flag.String("addr", "", "Target address (e.g. Caxbcd123456)")
 	amount := flag.Int("amount", 0, "Amount to mint")
 	privB64 := flag.String("priv", "", "Base64-encoded private key (64 bytes)")
 	flag.Parse()
 
 	if *addr == "" || *amount <= 0 || *privB64 == "" {
-		fmt.Println("Usage: go run mint_sign.go -addr=Xu... -amount=123 -priv=BASE64KEY")
+		fmt.Println("Usage: go run mint_sign.go -addr=Ca... -amount=123 -priv=BASE64KEY")
 		os.Exit(1)
 	}
 

@@ -7,13 +7,13 @@ import (
 )
 
 const (
-	genesisAddr  = "Xueee0442cce"
+	genesisAddr  = "Caeee0442cce"
 	genesisFunds = 10000
 )
 
 func main() {
 	// Remove all persistent state
-	files := []string{"xu_blocks.log", "xu_mempool.json", "xu_state.json"}
+	files := []string{"carp_blocks.log", "carp_mempool.json", "carp_state.json"}
 	for _, f := range files {
 		err := os.Remove(f)
 		if err == nil {
@@ -22,7 +22,7 @@ func main() {
 	}
 
 	// Recreate empty mempool
-	os.WriteFile("xu_mempool.json", []byte("[]"), 0644)
+	os.WriteFile("carp_mempool.json", []byte("[]"), 0644)
 
 	// Set initial wallet state
 	state := map[string]interface{}{
@@ -32,7 +32,7 @@ func main() {
 		"nonces": map[string]uint64{},
 	}
 	data, _ := json.MarshalIndent(state, "", "  ")
-	os.WriteFile("xu_state.json", data, 0644)
+	os.WriteFile("carp_state.json", data, 0644)
 
-	fmt.Printf("✅ XuChain reset. %d Xu minted to %s\n", genesisFunds, genesisAddr)
+	fmt.Printf("✅ CARP Chain reset. %d CARP minted to %s\n", genesisFunds, genesisAddr)
 }

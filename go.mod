@@ -1,4 +1,4 @@
-module xu
+module carp
 
 go 1.24.2
 

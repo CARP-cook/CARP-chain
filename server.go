@@ -1,4 +1,4 @@
-// server.go – XuChain REST-API with live state and mempool display
+// server.go – CARP Chain REST-API with live state and mempool display
 package main
 
 import (
@@ -16,16 +16,16 @@ import (
 	"strings"
 	"sync"
 
-	"xu/app"
+	"carp/app"
 
 	"github.com/joho/godotenv"
 )
 
-var xuApp *app.XuApp
+var CarpApp *app.CarpApp
 var mempool []app.SignedTx
 var mempoolMu sync.Mutex
 
-const mempoolFile = "xu_mempool.json"
+const mempoolFile = "carp_mempool.json"
 
 func init() {
 	err := godotenv.Load()
@@ -35,7 +35,7 @@ func init() {
 }
 
 func main() {
-	xuApp = app.NewXuApp()
+	CarpApp = app.NewCarpApp()
 
 	http.HandleFunc("/balance", withCORS(handleBalance))
 	http.HandleFunc("/nonce", withCORS(handleNonce))
@@ -45,7 +45,7 @@ func main() {
 	http.HandleFunc("/send-multi", withCORS(handleMultiSendToMempool))
 	http.HandleFunc("/redeem-veco", withCORS(handleRedeemVeco))
 
-	fmt.Println("🌐 XuChain API running at http://localhost:8080")
+	fmt.Println("🌐 CARP Chain API running at http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -68,7 +68,7 @@ func handleBalance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid address", http.StatusBadRequest)
 		return
 	}
-	freshApp := app.NewXuApp()
+	freshApp := app.NewCarpApp()
 	bal := freshApp.GetBalance(addr)
 	json.NewEncoder(w).Encode(map[string]interface{}{"address": addr, "balance": bal})
 }
@@ -79,7 +79,7 @@ func handleNonce(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid address", http.StatusBadRequest)
 		return
 	}
-	freshApp := app.NewXuApp()
+	freshApp := app.NewCarpApp()
 	nonce := freshApp.GetNonce(addr)
 	json.NewEncoder(w).Encode(map[string]interface{}{"address": addr, "nonce": nonce})
 }
@@ -106,7 +106,7 @@ func handleSendToMempool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	adminPubKey := os.Getenv("XU_ADMIN_PUBKEY")
+	adminPubKey := os.Getenv("CARP_ADMIN_PUBKEY")
 	if tx.Tx.Type == "mint" && tx.PubKey != adminPubKey {
 		http.Error(w, "Unauthorized: only admin can mint", http.StatusForbidden)
 		return
@@ -118,7 +118,7 @@ func handleSendToMempool(w http.ResponseWriter, r *http.Request) {
 	}
 	defer mempoolMu.Unlock()
 
-	// 🧠 Neue Version liest die Datei → aktualisiert → schreibt zurück
+	// New version reads the file → updated → writes back
 	var mempool []app.SignedTx
 	if raw, err := os.ReadFile(mempoolFile); err == nil {
 		json.Unmarshal(raw, &mempool)
@@ -145,7 +145,7 @@ func handleMempool(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleBlocks(w http.ResponseWriter, r *http.Request) {
-	data, err := os.ReadFile("xu_blocks.log")
+	data, err := os.ReadFile("carp_blocks.log")
 	if err != nil {
 		http.Error(w, "Log file not found", http.StatusInternalServerError)
 		return
@@ -175,7 +175,7 @@ func handleMultiSendToMempool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	adminPubKey := os.Getenv("XU_ADMIN_PUBKEY")
+	adminPubKey := os.Getenv("CARP_ADMIN_PUBKEY")
 
 	mempoolMu.Lock()
 	defer mempoolMu.Unlock()
@@ -219,8 +219,8 @@ func handleMultiSendToMempool(w http.ResponseWriter, r *http.Request) {
 
 func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 	type RedeemRequest struct {
-		AmountXu    int64  `json:"amount_xu"`
-		XuAddress   string `json:"xu_address"`
+		AmountCarp  int64  `json:"amount_carp"`
+		CarpAddress string `json:"carp_address"`
 		VecoAddress string `json:"veco_address"`
 		PubKey      string `json:"pubkey"`
 		Signature   string `json:"signature"`
@@ -239,9 +239,9 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 	req := payload.RedeemRequest
 	burnTx := payload.BurnTx
 
-	// Validate Xu address
-	if !app.IsValidAddress(req.XuAddress) {
-		http.Error(w, "Invalid Xu address", http.StatusBadRequest)
+	// Validate CARP address
+	if !app.IsValidAddress(req.CarpAddress) {
+		http.Error(w, "Invalid CARP address", http.StatusBadRequest)
 		return
 	}
 
@@ -253,14 +253,14 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify redeem request signature
-	message := fmt.Sprintf("%d|%s|%s", req.AmountXu, req.XuAddress, req.VecoAddress)
+	message := fmt.Sprintf("%d|%s|%s", req.AmountCarp, req.CarpAddress, req.VecoAddress)
 	if !ed25519.Verify(pubKeyBytes, []byte(message), mustDecodeB64(req.Signature)) {
 		http.Error(w, "Invalid redeem signature", http.StatusBadRequest)
 		return
 	}
 
 	// Verify burnTx correctness
-	if !strings.HasPrefix(burnTx.Tx.Type, "redeem:") || burnTx.Tx.From != req.XuAddress || burnTx.Tx.To != "Xu0000000000" || burnTx.Tx.Amount != req.AmountXu {
+	if !strings.HasPrefix(burnTx.Tx.Type, "redeem:") || burnTx.Tx.From != req.CarpAddress || burnTx.Tx.To != "Ca0000000000" || burnTx.Tx.Amount != req.AmountCarp {
 		http.Error(w, "Burn TX does not match redeem request", http.StatusBadRequest)
 		return
 	}
@@ -298,16 +298,16 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check Xu balance
-	freshApp := app.NewXuApp()
-	currentBalance := freshApp.GetBalance(req.XuAddress)
-	if currentBalance < req.AmountXu {
-		http.Error(w, "Insufficient Xu balance", http.StatusPaymentRequired)
+	// Check CARP balance
+	freshApp := app.NewCarpApp()
+	currentBalance := freshApp.GetBalance(req.CarpAddress)
+	if currentBalance < req.AmountCarp {
+		http.Error(w, "Insufficient CARP balance", http.StatusPaymentRequired)
 		return
 	}
 
 	// Calculate required Veco
-	quoteStr := os.Getenv("XU_REDEEM_QUOTE")
+	quoteStr := os.Getenv("CARP_REDEEM_QUOTE")
 	if quoteStr == "" {
 		quoteStr = "1000"
 	}
@@ -316,7 +316,7 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid redeem quote", http.StatusInternalServerError)
 		return
 	}
-	vecoAmount := float64(req.AmountXu) / quote
+	vecoAmount := float64(req.AmountCarp) / quote
 
 	// Check available Veco balance
 	balanceCmd := exec.Command("veco-cli", "getbalance")
@@ -336,7 +336,7 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Burn Xu (add burnTx to mempool)
+	// 1. Burn CARP (add burnTx to mempool)
 	mempoolMu.Lock()
 	defer mempoolMu.Unlock()
 
@@ -370,10 +370,10 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":    "success",
-		"xu_burned": req.AmountXu,
-		"veco_sent": fmt.Sprintf("%.8f", vecoAmount),
-		"veco_txid": txid,
+		"status":      "success",
+		"carp_burned": req.AmountCarp,
+		"veco_sent":   fmt.Sprintf("%.8f", vecoAmount),
+		"veco_txid":   txid,
 	})
 }
 

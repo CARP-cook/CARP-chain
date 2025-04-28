@@ -1,14 +1,14 @@
-// utility/explorer.go – simple XuChain block explorer with HTML view
+// utility/explorer.go – simple CARP Chain block explorer with HTML view
 package main
 
 import (
 	"bufio"
+	"carp/app"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
 	"os"
-	"xu/app"
 )
 
 type Block struct {
@@ -22,7 +22,7 @@ func main() {
 	http.HandleFunc("/blocks", handleBlocks)
 	http.HandleFunc("/blocks/latest", handleLatestBlock)
 	http.HandleFunc("/html", handleHTML)
-	fmt.Println("🔍 XuChain Block Explorer available at http://localhost:8081")
+	fmt.Println("🔍 CARP Chain Block Explorer available at http://localhost:8081")
 	http.ListenAndServe(":8081", nil)
 }
 
@@ -46,7 +46,7 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 	<html>
 	<head>
 	  <meta charset="UTF-8">
-	  <title>XuChain Explorer</title>
+	  <title> CARP Chain Explorer</title>
 	  <style>
 	    body { font-family: sans-serif; }
 	    .tx { margin-left: 2em; cursor: pointer; color: blue; text-decoration: underline; }
@@ -103,7 +103,7 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 	  </script>
 	</head>
 	<body>
-	  <h1>🧾 XuChain Block Explorer</h1>
+	  <h1>🧾 CARP Chain Block Explorer</h1>
 	  <input type="text" id="searchInput" onkeyup="searchTxs()" placeholder="🔍 Search transactions..." />
 	  {{range $i, $block := .}}
 	    <div class="block {{if eq $i 0}}highlight{{end}}">
@@ -139,7 +139,7 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 
 func loadBlocks() []Block {
 	var blocks []Block
-	file, err := os.Open("xu_blocks.log")
+	file, err := os.Open("carp_blocks.log")
 	if err != nil {
 		return blocks
 	}
