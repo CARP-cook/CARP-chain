@@ -316,6 +316,13 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Nonce check: Burn-TX nonce must match current nonce
+	currentNonce := freshApp.GetNonce(req.CarpAddress)
+	if burnTx.Tx.Nonce != currentNonce {
+		http.Error(w, fmt.Sprintf("Invalid nonce: expected %d, got %d", currentNonce, burnTx.Tx.Nonce), http.StatusBadRequest)
+		return
+	}
+
 	// Calculate required Veco
 	quoteStr := os.Getenv("CARP_REDEEM_QUOTE")
 	if quoteStr == "" {
@@ -370,16 +377,40 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Wait for burnTx to be included in a block
+	// Wait for burnTx to be included in a block (efficient: only last 1000 lines)
 	confirmed := false
 	for i := 0; i < 30; i++ {
 		time.Sleep(1 * time.Second)
-		blockData, err := os.ReadFile("carp_blocks.log")
+		data, err := os.ReadFile("carp_blocks.log")
 		if err != nil {
 			continue
 		}
-		if bytes.Contains(blockData, []byte(burnTx.Tx.Hash)) {
-			confirmed = true
+		lines := bytes.Split(data, []byte("\n"))
+		if len(lines) > 1000 {
+			lines = lines[len(lines)-1000:]
+		}
+		for _, line := range lines {
+			if len(line) == 0 {
+				continue
+			}
+			var blk struct {
+				Txs []struct {
+					Hash string `json:"hash"`
+				} `json:"txs"`
+			}
+			if err := json.Unmarshal(line, &blk); err == nil {
+				for _, tx := range blk.Txs {
+					if tx.Hash == burnTx.Tx.Hash {
+						confirmed = true
+						break
+					}
+				}
+			}
+			if confirmed {
+				break
+			}
+		}
+		if confirmed {
 			break
 		}
 	}
@@ -387,6 +418,20 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Burn transaction not confirmed in a block. Please try again later.", http.StatusRequestTimeout)
 		return
 	}
+
+	// Check if this burnTx has already been used (confirmed before)
+	usedTxsFile := "redeemed_burn_hashes.json"
+	usedTxs := map[string]bool{}
+	if data, err := os.ReadFile(usedTxsFile); err == nil {
+		json.Unmarshal(data, &usedTxs)
+	}
+	if usedTxs[burnTx.Tx.Hash] {
+		http.Error(w, "Burn TX has already been processed", http.StatusConflict)
+		return
+	}
+	usedTxs[burnTx.Tx.Hash] = true
+	updated, _ := json.MarshalIndent(usedTxs, "", "  ")
+	os.WriteFile(usedTxsFile, updated, 0644)
 
 	// 2. Send Veco
 	sendCmd := exec.Command("veco-cli", "sendtoaddress", req.VecoAddress, fmt.Sprintf("%.8f", vecoAmount))
