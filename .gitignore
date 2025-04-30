@@ -1,8 +1,8 @@
 # State and runtime files
-xu_state.json
-xu_mempool.json
-xu_nonce.json
-xu_blocks.log
+carp_state.json
+carp_mempool.json
+carp_nonce.json
+carp_blocks.log
 
 # Explicit tx JSONs
 tx.json
