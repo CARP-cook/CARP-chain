@@ -28,7 +28,7 @@ const (
 func main() {
 	carpApp := app.NewCarpApp()
 
-	// 🔐 Decode admin pubkey from base64
+	// Decode admin pubkey from base64
 	adminPubKeyB64 := os.Getenv("CARP_ADMIN_PUBKEY")
 	adminPubKey, err := base64.StdEncoding.DecodeString(adminPubKeyB64)
 	if err != nil || len(adminPubKey) != 32 {
@@ -58,7 +58,7 @@ func main() {
 			fmt.Printf("🔍 TX[%d]: type=%s, from=%s, to=%s, amount=%d, nonce=%d\n",
 				i, tx.Tx.Type, tx.Tx.From, tx.Tx.To, tx.Tx.Amount, tx.Tx.Nonce)
 
-			// 🛡️ Adminprüfung (mint darf nur von adminPubKey stammen)
+			// Only admin can do mint
 			if tx.Tx.Type == "mint" {
 				txPubKey, err := base64.StdEncoding.DecodeString(tx.PubKey)
 				if err != nil || !bytes.Equal(txPubKey, adminPubKey) {

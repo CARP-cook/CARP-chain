@@ -68,7 +68,7 @@ func (a *CarpApp) ApplySignedTxJSON(s SignedTx) ([]byte, error) {
 	if !IsValidAddress(s.Tx.From) && s.Tx.From != "" {
 		return nil, fmt.Errorf("invalid sender address format: %s", s.Tx.From)
 	}
-	if !IsValidAddress(s.Tx.To) {
+	if !IsValidAddress(s.Tx.To) && s.Tx.To != "burn" {
 		return nil, fmt.Errorf("invalid recipient address format: %s", s.Tx.To)
 	}
 
@@ -123,7 +123,9 @@ func (a *CarpApp) ApplyTx(tx Tx) ([]byte, error) {
 			return nil, fmt.Errorf("insufficient balance")
 		}
 		a.wallet[tx.From] -= tx.Amount
-		a.wallet[tx.To] += tx.Amount
+		if tx.To != "burn" {
+			a.wallet[tx.To] += tx.Amount
+		}
 		return []byte(fmt.Sprintf("redeemed %d CARP from %s to %s (redeem target %s)", tx.Amount, tx.From, tx.To, tx.Type[7:])), nil
 	default:
 		return nil, fmt.Errorf("unknown tx type")

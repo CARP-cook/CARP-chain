@@ -260,7 +260,7 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify burnTx correctness
-	if !strings.HasPrefix(burnTx.Tx.Type, "redeem:") || burnTx.Tx.From != req.CarpAddress || burnTx.Tx.To != "Ca0000000000001a2b" || burnTx.Tx.Amount != req.AmountCarp {
+	if !strings.HasPrefix(burnTx.Tx.Type, "redeem:") || burnTx.Tx.From != req.CarpAddress || burnTx.Tx.To != "burn" || burnTx.Tx.Amount != req.AmountCarp {
 		http.Error(w, "Burn TX does not match redeem request", http.StatusBadRequest)
 		return
 	}
