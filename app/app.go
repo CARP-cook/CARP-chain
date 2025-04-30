@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"sync"
 )
@@ -136,9 +135,32 @@ func decodeBase64(s string) ([]byte, error) {
 }
 
 // IsValidAddress checks if the address matches the expected CARP format
+//func IsValidAddress(addr string) bool {
+//	matched, _ := regexp.MatchString(`^Ca[a-f0-9]{10}$`, addr)
+//	return matched
+//}
+
+// IsValidAddress checks both format and checksum of a CARP address (6 byte hash + 2 byte checksum)
 func IsValidAddress(addr string) bool {
-	matched, _ := regexp.MatchString(`^Ca[a-f0-9]{10}$`, addr)
-	return matched
+	if len(addr) != 18 || !strings.HasPrefix(addr, "Ca") {
+		return false
+	}
+	addrHex := addr[2:] // skip "Ca"
+
+	// Decode full address bytes
+	addrBytes, err := hex.DecodeString(addrHex)
+	if err != nil || len(addrBytes) != 8 {
+		return false
+	}
+
+	core := addrBytes[:6]
+	checksum := addrBytes[6:]
+
+	// Recalculate checksum from core hash
+	h := sha256.Sum256(core)
+	expectedChecksum := h[0:2]
+
+	return checksum[0] == expectedChecksum[0] && checksum[1] == expectedChecksum[1]
 }
 
 func (a *CarpApp) SaveState() {

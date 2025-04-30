@@ -19,9 +19,19 @@ func GenerateKeyPair() (ed25519.PublicKey, ed25519.PrivateKey) {
 }
 
 // PublicKeyToAddress generates a CARP address from the given public key.
+//func PublicKeyToAddress(pub ed25519.PublicKey) string {
+//	h := sha256.Sum256(pub)
+//	return "Ca" + hex.EncodeToString(h[:])[:10] // short address prefix
+//}
+
+// PublicKeyToAddress generates a CARP address from the public key (6-byte hash + 2-byte checksum)
 func PublicKeyToAddress(pub ed25519.PublicKey) string {
 	h := sha256.Sum256(pub)
-	return "Ca" + hex.EncodeToString(h[:])[:10] // short address prefix
+	core := h[:6] // 6 Byte Adresse
+	cs := sha256.Sum256(core)
+	checksum := cs[:2]
+	full := append(core, checksum...)
+	return "Ca" + hex.EncodeToString(full)
 }
 
 // Sign signs the given transaction bytes with the provided private key and returns a base64-encoded signature.
