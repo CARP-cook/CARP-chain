@@ -25,7 +25,8 @@ import (
 var CarpApp *app.CarpApp
 var mempool []app.SignedTx
 var mempoolMu sync.Mutex
-var redeemLocks sync.Map // map[address]time.Time
+var redeemLocks sync.Map    // map[address]time.Time
+var pendingRedeems sync.Map // map[carpAddress]burnTxHash
 
 const mempoolFile = "carp_mempool.json"
 
@@ -242,12 +243,12 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 	burnTx := payload.BurnTx
 
 	// Prevent parallel redeems for the same address
-	if _, locked := redeemLocks.Load(req.CarpAddress); locked {
+	if _, locked := pendingRedeems.Load(req.CarpAddress); locked {
 		http.Error(w, "Redeem already in progress for this address", http.StatusTooManyRequests)
 		return
 	}
-	redeemLocks.Store(req.CarpAddress, time.Now())
-	defer redeemLocks.Delete(req.CarpAddress)
+	pendingRedeems.Store(req.CarpAddress, burnTx.Tx.Hash)
+	defer pendingRedeems.Delete(req.CarpAddress)
 
 	// Validate CARP address
 	if !app.IsValidAddress(req.CarpAddress) {
@@ -364,6 +365,24 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 
 	if err := os.WriteFile(mempoolFile, data, 0644); err != nil {
 		http.Error(w, "Failed to write to mempool", http.StatusInternalServerError)
+		return
+	}
+
+	// Wait for burnTx to be included in a block
+	confirmed := false
+	for i := 0; i < 30; i++ {
+		time.Sleep(1 * time.Second)
+		blockData, err := os.ReadFile("carp_blocks.log")
+		if err != nil {
+			continue
+		}
+		if bytes.Contains(blockData, []byte(burnTx.Tx.Hash)) {
+			confirmed = true
+			break
+		}
+	}
+	if !confirmed {
+		http.Error(w, "Burn transaction not confirmed in a block. Please try again later.", http.StatusRequestTimeout)
 		return
 	}
 
