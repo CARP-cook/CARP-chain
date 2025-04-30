@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"carp/app"
 
@@ -24,6 +25,7 @@ import (
 var CarpApp *app.CarpApp
 var mempool []app.SignedTx
 var mempoolMu sync.Mutex
+var redeemLocks sync.Map // map[address]time.Time
 
 const mempoolFile = "carp_mempool.json"
 
@@ -238,6 +240,14 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 
 	req := payload.RedeemRequest
 	burnTx := payload.BurnTx
+
+	// Prevent parallel redeems for the same address
+	if _, locked := redeemLocks.Load(req.CarpAddress); locked {
+		http.Error(w, "Redeem already in progress for this address", http.StatusTooManyRequests)
+		return
+	}
+	redeemLocks.Store(req.CarpAddress, time.Now())
+	defer redeemLocks.Delete(req.CarpAddress)
 
 	// Validate CARP address
 	if !app.IsValidAddress(req.CarpAddress) {
