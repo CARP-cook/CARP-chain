@@ -247,7 +247,6 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Redeem already in progress for this address", http.StatusTooManyRequests)
 		return
 	}
-	pendingRedeems.Store(req.CarpAddress, burnTx.Tx.Hash)
 	defer pendingRedeems.Delete(req.CarpAddress)
 
 	// Validate CARP address
@@ -346,6 +345,9 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Insufficient Veco balance: available %.8f, needed %.8f", vecoBalance, vecoAmount), http.StatusPaymentRequired)
 		return
 	}
+
+	// Mark address as redeeming only after all validations passed
+	pendingRedeems.Store(req.CarpAddress, burnTx.Tx.Hash)
 
 	// 1. Burn CARP (add burnTx to mempool)
 	mempoolMu.Lock()
