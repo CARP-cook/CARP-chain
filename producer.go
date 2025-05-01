@@ -71,12 +71,7 @@ func main() {
 			// Set hash for the transaction
 			tx.Tx.Hash = app.ComputeTxHash(tx.Tx)
 
-			// Prevent duplicate nonce per address
-			lastSeenNonce, ok := carpApp.GetLastSeenNonce(tx.Tx.From)
-			if ok && tx.Tx.Nonce <= lastSeenNonce {
-				fmt.Println("🚫 Nonce already used or too low:", tx.Tx.Nonce)
-				continue
-			}
+			// Nonce validation is handled inside ApplySignedTxJSON
 
 			if seen[tx.Tx.Hash] {
 				fmt.Println("🚫 Duplicate TX hash detected, skipping:", tx.Tx.Hash)

@@ -118,11 +118,6 @@ func (a *CarpApp) ApplyTx(tx Tx) ([]byte, error) {
 		a.wallet[tx.To] += tx.Amount
 		return []byte(fmt.Sprintf("transferred %d CARP from %s to %s", tx.Amount, tx.From, tx.To)), nil
 	case strings.HasPrefix(tx.Type, "redeem:"):
-		lastNonce := a.nonces[tx.From]
-		if tx.Nonce <= lastNonce {
-			return nil, fmt.Errorf("invalid nonce: %d (last used: %d)", tx.Nonce, lastNonce)
-		}
-		a.nonces[tx.From] = tx.Nonce
 		if a.wallet[tx.From] < tx.Amount {
 			return nil, fmt.Errorf("insufficient balance")
 		}
