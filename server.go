@@ -73,6 +73,7 @@ func handleBalance(w http.ResponseWriter, r *http.Request) {
 	}
 	freshApp := app.NewCarpApp()
 	bal := freshApp.GetBalance(addr)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"address": addr, "balance": bal})
 }
 
@@ -84,6 +85,7 @@ func handleNonce(w http.ResponseWriter, r *http.Request) {
 	}
 	freshApp := app.NewCarpApp()
 	nonce := freshApp.GetNonce(addr)
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"address": addr, "nonce": nonce})
 }
 
