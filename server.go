@@ -377,6 +377,13 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Apply burnTx to update state and nonce
+	_, err = CarpApp.ApplySignedTxJSON(burnTx)
+	if err != nil {
+		http.Error(w, "Failed to apply burnTx: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	// Wait for burnTx to be included in a block (efficient: only last 1000 lines)
 	confirmed := false
 	for i := 0; i < 30; i++ {
