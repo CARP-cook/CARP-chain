@@ -54,6 +54,7 @@ func main() {
 
 		fmt.Printf("⛓️  Block %d: processing %d TXs\n", blockHeight, len(txs))
 		var accepted []app.SignedTx
+		seen := make(map[string]bool)
 		for i, tx := range txs {
 			fmt.Printf("🔍 TX[%d]: type=%s, from=%s, to=%s, amount=%d, nonce=%d\n",
 				i, tx.Tx.Type, tx.Tx.From, tx.Tx.To, tx.Tx.Amount, tx.Tx.Nonce)
@@ -69,6 +70,12 @@ func main() {
 
 			// Set hash for the transaction
 			tx.Tx.Hash = app.ComputeTxHash(tx.Tx)
+
+			if seen[tx.Tx.Hash] {
+				fmt.Println("🚫 Duplicate TX hash detected, skipping:", tx.Tx.Hash)
+				continue
+			}
+			seen[tx.Tx.Hash] = true
 
 			// apply tx
 			res, err := carpApp.ApplySignedTxJSON(tx)

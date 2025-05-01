@@ -126,6 +126,12 @@ func handleSendToMempool(w http.ResponseWriter, r *http.Request) {
 	if raw, err := os.ReadFile(mempoolFile); err == nil {
 		json.Unmarshal(raw, &mempool)
 	}
+	for _, existing := range mempool {
+		if existing.Tx.Hash == tx.Tx.Hash {
+			http.Error(w, "Duplicate TX: already in mempool", http.StatusConflict)
+			return
+		}
+	}
 	mempool = append(mempool, tx)
 
 	data, _ := json.MarshalIndent(mempool, "", "  ")
@@ -363,6 +369,12 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 	var mempool []app.SignedTx
 	if raw, err := os.ReadFile(mempoolFile); err == nil {
 		json.Unmarshal(raw, &mempool)
+	}
+	for _, existing := range mempool {
+		if existing.Tx.Hash == burnTx.Tx.Hash {
+			http.Error(w, "Duplicate TX: already in mempool", http.StatusConflict)
+			return
+		}
 	}
 	mempool = append(mempool, burnTx)
 
