@@ -27,12 +27,12 @@ func main() {
 }
 
 func handleBlocks(w http.ResponseWriter, r *http.Request) {
-	blocks := loadBlocks()
+	blocks := loadBlocks(0)
 	json.NewEncoder(w).Encode(blocks)
 }
 
 func handleLatestBlock(w http.ResponseWriter, r *http.Request) {
-	blocks := loadBlocks()
+	blocks := loadBlocks(0)
 	if len(blocks) == 0 {
 		http.Error(w, "No blocks found", http.StatusNotFound)
 		return
@@ -85,13 +85,14 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 	      const blocks = document.querySelectorAll(".block");
 
 	      blocks.forEach(block => {
-	        const blockText = block.textContent.toLowerCase();
-	        const match = blockText.includes(query);
-	        block.style.display = match ? "block" : "none";
+	        const heightText = block.querySelector("h3").textContent.toLowerCase();
+	        const txsText = block.textContent.toLowerCase();
+	        const isMatch = heightText.includes(query) || txsText.includes(query);
+	        block.style.display = isMatch ? "block" : "none";
 
 	        const txDivs = block.querySelectorAll(".tx, .details");
 	        txDivs.forEach(div => {
-	          div.style.display = match ? "block" : "none";
+	          div.style.display = isMatch ? "block" : "none";
 	        });
 	      });
 	    }
@@ -129,7 +130,7 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 	</body>
 	</html>`
 	t := template.Must(template.New("html").Parse(tmpl))
-	blocks := loadBlocks()
+	blocks := loadBlocks(100)
 	// Reverse blocks to show the newest block first
 	for i, j := 0, len(blocks)-1; i < j; i, j = i+1, j-1 {
 		blocks[i], blocks[j] = blocks[j], blocks[i]
@@ -137,7 +138,7 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, blocks)
 }
 
-func loadBlocks() []Block {
+func loadBlocks(limit int) []Block {
 	var blocks []Block
 	file, err := os.Open("carp_blocks.log")
 	if err != nil {
@@ -145,12 +146,43 @@ func loadBlocks() []Block {
 	}
 	defer file.Close()
 
+	if limit <= 0 {
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			var b Block
+			if err := json.Unmarshal(scanner.Bytes(), &b); err == nil {
+				blocks = append(blocks, b)
+			}
+		}
+		return blocks
+	}
+
+	// Count total lines
+	totalLines := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		var b Block
-		if err := json.Unmarshal(scanner.Bytes(), &b); err == nil {
-			blocks = append(blocks, b)
-		}
+		totalLines++
 	}
+
+	// Reset file pointer to beginning
+	file.Seek(0, 0)
+	scanner = bufio.NewScanner(file)
+
+	// Skip lines until start of last 'limit' lines
+	skip := totalLines - limit
+	if skip < 0 {
+		skip = 0
+	}
+	currentLine := 0
+	for scanner.Scan() {
+		if currentLine >= skip {
+			var b Block
+			if err := json.Unmarshal(scanner.Bytes(), &b); err == nil {
+				blocks = append(blocks, b)
+			}
+		}
+		currentLine++
+	}
+
 	return blocks
 }
