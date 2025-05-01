@@ -318,7 +318,7 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 
 	// Nonce check: Burn-TX nonce must match current nonce
 	currentNonce := freshApp.GetNonce(req.CarpAddress)
-	if burnTx.Tx.Nonce != currentNonce {
+	if burnTx.Tx.Nonce != currentNonce+1 {
 		http.Error(w, fmt.Sprintf("Invalid nonce: expected %d, got %d", currentNonce, burnTx.Tx.Nonce), http.StatusBadRequest)
 		return
 	}
