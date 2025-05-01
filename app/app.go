@@ -73,7 +73,7 @@ func (a *CarpApp) ApplySignedTxJSON(s SignedTx) ([]byte, error) {
 	}
 
 	// Nonce check
-	if s.Tx.Type == "transfer" {
+	if s.Tx.Type == "transfer" || strings.HasPrefix(s.Tx.Type, "redeem:") {
 		a.mu.Lock()
 		lastNonce := a.nonces[s.Tx.From]
 		if s.Tx.Nonce <= lastNonce {
