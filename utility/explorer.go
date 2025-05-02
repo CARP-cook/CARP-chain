@@ -56,8 +56,8 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 html {
   background: #f5f7fa;
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 16px;
-  color: #2c3e50;
+  font-size: 1rem;
+  color: #2c6e49;
 }
 
 body {
@@ -67,69 +67,82 @@ body {
   background: white;
   border-radius: 12px;
   box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
+  font-size: 1rem;
+  color: #2c6e49;
 }
 
 h1 {
   text-align: center;
-  color: #2d6a4f;
-  font-size: 2rem;
+  color: #2c6e49;
+  font-size: 1rem;
   margin-bottom: 1rem;
 }
 
 h3 {
-  font-size: 1.1rem;
+  font-size: 1rem;
   margin-top: 1.5rem;
-  color: #1b4332;
+  color: #2c6e49;
 }
 
 input#searchInput {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
+  padding: 0.8rem;
+  border: 1px solid #2c6e49;
   border-radius: 8px;
   margin-bottom: 1.5rem;
   font-size: 1rem;
+  background: #f2f2f2;
+  color: #2c6e49;
 }
 
 .block {
   background: #f9fbfc;
   padding: 1rem;
-  border-left: 4px solid #52b788;
+  border-left: 4px solid #2c6e49;
   border-radius: 8px;
   margin-bottom: 1rem;
 }
 
 .block.highlight {
-  background: #d8f3dc;
+  background: #e6f4ea;
 }
 
 .block h3 {
-  font-size: 1.1rem;
+  font-size: 1rem;
   word-break: break-word;
   overflow-wrap: break-word;
+  color: #2c6e49;
 }
 
 .tx {
   cursor: pointer;
-  color: #40916c;
+  color: #2c6e49;
   font-weight: 500;
-  margin-left: 1rem;
-  margin-top: 0.5rem;
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  display: block;
 }
 
 .details {
   display: none;
-  background: #e9f5ec;
+  background: #e6f4ea;
   padding: 0.75rem;
   border-radius: 6px;
   margin: 0.5rem 0 0 2rem;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  color: #2c6e49;
 }
 
-.details code {
-  background: #d8f3dc;
-  padding: 2px 5px;
-  border-radius: 3px;
+code {
+  font-size: 1rem;
+  word-break: break-word;
+  white-space: normal;
+  display: block;
+  background: #f2f2f2;
+  padding: 0.4em 0.6em;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #2c6e49;
 }
 
 .pagination {
@@ -142,7 +155,7 @@ input#searchInput {
   margin: 0.3rem;
   border: none;
   border-radius: 6px;
-  background-color: #52b788;
+  background-color: #2c6e49;
   color: white;
   font-weight: bold;
   cursor: pointer;
@@ -153,18 +166,6 @@ input#searchInput {
   cursor: not-allowed;
 }
 
-code {
-  word-break: break-all;
-  white-space: normal;
-  display: inline-block;
-  font-family: monospace;
-  background: #eef2f3;
-  padding: 0.2em 0.5em;
-  border-radius: 3px;
-  font-size: 0.95em;
-  max-width: 100%;
-}
-
 img {
   max-height: 80px;
   display: block;
@@ -173,17 +174,26 @@ img {
 
 @media (max-width: 768px) {
   html {
-    font-size: 15px;
+    font-size: 1rem;
+  }
+
+  body {
+    padding: 1rem;
+    font-size: 1rem;
   }
 
   h1 {
-    font-size: 1.6rem;
+    font-size: 1rem;
     margin-bottom: 1rem;
   }
 
   input#searchInput {
     font-size: 1rem;
-    padding: 1rem;
+    padding: 0.8rem;
+    width: 100%;
+    box-sizing: border-box;
+    height: auto;
+    min-height: 44px;
   }
 
   .block h3 {
@@ -192,21 +202,30 @@ img {
   }
 
   code {
-    font-size: 0.8rem;
+    font-size: 1rem;
     word-break: break-word;
     overflow-wrap: break-word;
     white-space: normal;
-    display: inline-block;
+    display: block;
+    background: #f2f2f2;
+    padding: 0.4em 0.6em;
+    border-radius: 4px;
+    font-family: monospace;
+    color: #2c6e49;
   }
 
   .tx {
-    font-size: 0.9rem;
-    margin-left: 0.5rem;
+    font-size: 1rem;
+    margin: 0.5rem 0;
+    display: block;
+    color: #2c6e49;
   }
 
   .details {
-    font-size: 0.85rem;
+    font-size: 1rem;
     margin-left: 1rem;
+    background: #e6f4ea;
+    color: #2c6e49;
   }
 }
 	  </style>
@@ -259,7 +278,7 @@ img {
 	  </script>
 	</head>
 	<body>
-      <img src="carp.png" alt="CARP Logo" />
+      <img src="/carp.png" alt="CARP Logo" />
 	  <h1>CARP Chain Block Explorer</h1>
 	  <input type="text" id="searchInput" onkeyup="searchTxs()" placeholder="🔍 Search transactions..." />
 	  {{range $i, $block := .}}
