@@ -27,7 +27,7 @@ func main() {
 	http.HandleFunc("/blocks/latest", handleLatestBlock)
 	http.HandleFunc("/html", handleHTML)
 	http.HandleFunc("/", handleHTML)
-	fmt.Println("🔍 CARP Chain Block Explorer available at http://localhost:8081")
+	fmt.Println("🔍 CARP Explorer available at http://localhost:8081")
 	http.ListenAndServe(":8081", nil)
 }
 
@@ -71,7 +71,7 @@ body {
 
 h1 {
   text-align: center;
-  color: #2d6a4f;
+  color: #db9c15;
   font-size: 2rem;
   margin-bottom: 1rem;
 }
@@ -94,13 +94,13 @@ input#searchInput {
 .block {
   background: #f9fbfc;
   padding: 1rem;
-  border-left: 4px solid #52b788;
+  border-left: 4px solidrgb(132, 165, 255);
   border-radius: 8px;
   margin-bottom: 1rem;
 }
 
 .block.highlight {
-  background: #d8f3dc;
+  background: #fef5b7;
 }
 
 .block h3 {
@@ -111,7 +111,7 @@ input#searchInput {
 
 .tx {
   cursor: pointer;
-  color: #40916c;
+  color: #f5c030;
   font-weight: 500;
   margin-left: 1rem;
   margin-top: 0.5rem;
@@ -149,7 +149,7 @@ input#searchInput {
   margin: 0.3rem;
   border: none;
   border-radius: 6px;
-  background-color: #52b788;
+  background-color: #db9c15;
   color: white;
   font-weight: bold;
   cursor: pointer;
@@ -291,11 +291,11 @@ img {
 	</head>
 	<body>
       <img src="/carp.png" alt="CARP Logo" />
-	  <h1>CARP Chain Block Explorer</h1>
+	  <h1>CARP Explorer</h1>
 	  <input type="text" id="searchInput" onkeyup="searchTxs()" placeholder="🔍 Search transactions..." />
 	  {{range $i, $block := .}}
 	    <div class="block {{if eq $i 0}}highlight{{end}}">
-	      <h3>🔗 Block {{$block.Height}} – {{$block.Timestamp}} – <code>{{$block.BlockHash}}</code></h3>
+	      <h3>Block {{$block.Height}} – {{$block.Timestamp}} – <code>{{$block.BlockHash}}</code></h3>
 	      {{range $j, $tx := $block.Txs}}
 	        <div class="tx" onclick="toggleDetails('tx-{{$block.Height}}-{{$j}}')">
 	          ↪ TX: <code>{{$tx.Tx.Hash}}</code>
@@ -311,8 +311,8 @@ img {
 	    </div>
 	  {{end}}
 	  <div class="pagination">
-	    <button id="prevBtn" onclick="showPage(currentPage - 1)">⬅️ Previous</button>
-	    <button id="nextBtn" onclick="showPage(currentPage + 1)">Next ➡️</button>
+	    <button id="prevBtn" onclick="showPage(currentPage - 1)">Previous</button>
+	    <button id="nextBtn" onclick="showPage(currentPage + 1)">Next</button>
 	  </div>
 	</body>
 	</html>`
