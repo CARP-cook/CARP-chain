@@ -73,7 +73,7 @@ func main() {
 	tx := app.Tx{
 		Type:   fmt.Sprintf("redeem:%s", *vecoAddr),
 		From:   *carpAddr,
-		To:     "Ca0000000000",
+		To:     "burn",
 		Amount: *amount,
 		Nonce:  useNonce,
 	}
