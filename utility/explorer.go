@@ -285,10 +285,10 @@ img {
 	  </script>
 	</head>
 	<body>
-      <img src="/static/carp.png" alt="CARP Logo" />
+      <img src="/static/carp.png?v={{.Now}}" alt="CARP Logo" />
 	  <h1>CARP Explorer</h1>
 	  <input type="text" id="searchInput" onkeyup="searchTxs()" placeholder="🔍 Search transactions..." />
-	  {{range $i, $block := .}}
+	  {{range $i, $block := .Blocks}}
 	    <div class="block {{if eq $i 0}}highlight{{end}}">
 	      <h3>
   			Block {{$block.Height}} – {{$block.Timestamp}}<br>
@@ -325,7 +325,14 @@ img {
 			blocks[i].Timestamp = parsedTime.Format("2006-01-02 15:04:05")
 		}
 	}
-	t.Execute(w, blocks)
+	data := struct {
+		Now    int64
+		Blocks []Block
+	}{
+		Now:    time.Now().Unix(),
+		Blocks: blocks,
+	}
+	t.Execute(w, data)
 }
 
 func loadBlocks(limit int) []Block {
