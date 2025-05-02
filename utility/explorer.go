@@ -103,6 +103,12 @@ input#searchInput {
   background: #d8f3dc;
 }
 
+.block h3 {
+  font-size: 1.1rem;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
 .tx {
   cursor: pointer;
   color: #40916c;
@@ -158,6 +164,13 @@ code {
   font-size: 0.95em;
   max-width: 100%;
 }
+
+img {
+  max-height: 80px;
+  display: block;
+  margin: 0 auto 1em auto;
+}
+
 @media (max-width: 768px) {
   html {
     font-size: 15px;
@@ -246,7 +259,7 @@ code {
 	  </script>
 	</head>
 	<body>
-      <img src="/carp.png" alt="CARP Logo" style="height: 80px; display: block; margin: 0 auto 1em auto;" />
+      <img src="carp.png" alt="CARP Logo" />
 	  <h1>CARP Chain Block Explorer</h1>
 	  <input type="text" id="searchInput" onkeyup="searchTxs()" placeholder="🔍 Search transactions..." />
 	  {{range $i, $block := .}}
