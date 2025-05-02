@@ -11,6 +11,10 @@ wrapped_multi.json
 # Ignore all other JSONs
 *.json
 
+# Logs and blocks
+*.log
+/blocks/
+
 # Misc
 protocol.txt
 .env
