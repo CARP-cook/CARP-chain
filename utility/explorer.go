@@ -159,14 +159,41 @@ code {
   max-width: 100%;
 }
 @media (max-width: 768px) {
-  code {
-    font-size: 0.85em;
+  html {
+    font-size: 15px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
+  }
+
+  input#searchInput {
+    font-size: 1rem;
+    padding: 1rem;
+  }
+
+  .block h3 {
+    font-size: 1rem;
     word-break: break-word;
   }
-  input#searchInput {
-    font-size: 1.1em;
-    padding: 1em;
-    margin-bottom: 2em;
+
+  code {
+    font-size: 0.8rem;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    display: inline-block;
+  }
+
+  .tx {
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+  }
+
+  .details {
+    font-size: 0.85rem;
+    margin-left: 1rem;
   }
 }
 	  </style>
