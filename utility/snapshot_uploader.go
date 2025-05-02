@@ -15,6 +15,7 @@ import (
 type GitHubRequest struct {
 	Message string `json:"message"`
 	Content string `json:"content"`
+	SHA     string `json:"sha,omitempty"`
 	Branch  string `json:"branch,omitempty"`
 }
 
@@ -49,15 +50,19 @@ func main() {
 	}
 
 	filePath = "carp_state.json"
-
 	b64Content := base64.StdEncoding.EncodeToString(fileData)
-
-	// Prepare URL for GitHub API
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", repoOwner, repoName, filePath)
+
+	sha, err := getExistingFileSHA(url, token)
+	if err != nil {
+		fmt.Println("❌ Failed to get existing file SHA:", err)
+		os.Exit(1)
+	}
 
 	payload := GitHubRequest{
 		Message: fmt.Sprintf("Snapshot upload %s", time.Now().Format(time.RFC3339)),
 		Content: b64Content,
+		SHA:     sha,
 		Branch:  branch,
 	}
 
@@ -82,6 +87,34 @@ func main() {
 		fmt.Printf("❌ GitHub error (%d): %s\n", resp.StatusCode, string(body))
 		os.Exit(1)
 	}
+}
+
+func getExistingFileSHA(url, token string) (string, error) {
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 404 {
+		// file does not exist yet
+		return "", nil
+	} else if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("GitHub API error %d: %s", resp.StatusCode, string(body))
+	}
+
+	var res GitHubResponse
+	err = json.NewDecoder(resp.Body).Decode(&res)
+	if err != nil {
+		return "", err
+	}
+
+	return res.SHA, nil
 }
 
 func readStateFile() ([]byte, string, error) {
