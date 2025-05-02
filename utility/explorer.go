@@ -292,7 +292,7 @@ img {
 	    <div class="block {{if eq $i 0}}highlight{{end}}">
 	      <h3>
   			Block {{$block.Height}} – {{$block.Timestamp}}<br>
-  			<code>{{$block.BlockHash}}</code>
+  			{{$block.BlockHash}}
 		 </h3>
 	      {{range $j, $tx := $block.Txs}}
 	        <div class="tx" onclick="toggleDetails('tx-{{$block.Height}}-{{$j}}')">
