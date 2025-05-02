@@ -46,7 +46,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	filePath = "carp_state.json.gz"
+	filePath = "carp_state.json"
 
 	b64Content := base64.StdEncoding.EncodeToString(fileData)
 
