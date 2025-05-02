@@ -17,6 +17,7 @@ type RedeemRequest struct {
 	VecoAddress string `json:"veco_address"`
 	PubKey      string `json:"pubkey"`
 	Signature   string `json:"signature"`
+	Coin        string `json:"coin"`
 }
 
 type RedeemPayload struct {
@@ -30,10 +31,11 @@ func main() {
 	vecoAddr := flag.String("veco", "", "Veco address")
 	amount := flag.Int64("amount", 0, "Amount in CARP to redeem")
 	nonce := flag.Uint64("nonce", 0, "Optional: nonce for the burn TX")
+	coin := flag.String("coin", "veco", "Target coin name (e.g., veco)")
 	flag.Parse()
 
 	if *privB64 == "" || *carpAddr == "" || *vecoAddr == "" || *amount <= 0 {
-		fmt.Println("Usage: sign_redeem_veco -priv <privkey> -ca <CARP address> -veco <Veco address> -amount <CARP> [-nonce <n>]")
+		fmt.Println("Usage: sign_redeem_veco -priv <privkey> -ca <CARP address> -veco <Veco address> -amount <CARP> [-nonce <n>] [-coin <coin>]")
 		os.Exit(1)
 	}
 
@@ -57,6 +59,7 @@ func main() {
 		VecoAddress: *vecoAddr,
 		PubKey:      pubB64,
 		Signature:   sigB64,
+		Coin:        *coin,
 	}
 
 	// Build burn TX
