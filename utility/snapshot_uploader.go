@@ -16,6 +16,7 @@ type GitHubRequest struct {
 	Message string `json:"message"`
 	Content string `json:"content"`
 	Branch  string `json:"branch,omitempty"`
+	SHA     string `json:"sha,omitempty"`
 }
 
 type GitHubResponse struct {
@@ -56,8 +57,33 @@ func main() {
 		Branch:  branch,
 	}
 
-	data, _ := json.Marshal(payload)
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", repoOwner, repoName, filePath)
+
+	// Check if remote file exists and compare SHA
+	shaReq, _ := http.NewRequest("GET", url, nil)
+	shaReq.Header.Set("Authorization", "Bearer "+token)
+	shaReq.Header.Set("Accept", "application/vnd.github+json")
+
+	shaResp, err := http.DefaultClient.Do(shaReq)
+	if err == nil && shaResp.StatusCode == 200 {
+		defer shaResp.Body.Close()
+		var ghResp GitHubResponse
+		body, _ := io.ReadAll(shaResp.Body)
+		json.Unmarshal(body, &ghResp)
+
+		existingSHA := ghResp.SHA
+		existingContent, _ := base64.StdEncoding.DecodeString(ghResp.Content.SHA)
+
+		if bytes.Equal(existingContent, fileData) {
+			fmt.Println("ℹ️ No change in state file. Skipping upload.")
+			return
+		}
+
+		// Update payload with SHA
+		payload.SHA = existingSHA
+	}
+
+	data, _ := json.Marshal(payload)
 
 	req, _ := http.NewRequest("PUT", url, bytes.NewReader(data))
 	req.Header.Set("Authorization", "Bearer "+token)
