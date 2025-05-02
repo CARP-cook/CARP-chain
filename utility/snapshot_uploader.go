@@ -55,6 +55,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Optional: Skip upload if identical
+	existingContent, err := fetchFileContentFromGitHub(url, token)
+	if err == nil && bytes.Equal(existingContent, fileData) {
+		fmt.Println("✅ Snapshot identical — skipping upload.")
+		return
+	}
+
 	payload := GitHubRequest{
 		Message: fmt.Sprintf("Snapshot upload %s", time.Now().Format(time.RFC3339)),
 		Content: b64Content,
@@ -119,4 +126,40 @@ func readStateFile() ([]byte, string, error) {
 		return nil, "", err
 	}
 	return data, "carp_state.json", nil
+}
+
+func fetchFileContentFromGitHub(url, token string) ([]byte, error) {
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("status %d", resp.StatusCode)
+	}
+
+	var response struct {
+		Content  string `json:"content"`
+		Encoding string `json:"encoding"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.Encoding != "base64" {
+		return nil, fmt.Errorf("unexpected encoding: %s", response.Encoding)
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(response.Content)
+	if err != nil {
+		return nil, err
+	}
+
+	return decoded, nil
 }
