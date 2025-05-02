@@ -21,13 +21,12 @@ func main() {
 		}
 	}
 
-	// Delete all carp_blocks_*.log files
-	entries, _ := os.ReadDir(".")
-	for _, entry := range entries {
-		name := entry.Name()
-		if !entry.IsDir() && len(name) > 16 && name[:14] == "carp_blocks_" && name[len(name)-4:] == ".log" {
-			os.Remove(name)
-			fmt.Printf("🧹 Deleted %s\n", name)
+	// Delete all block log files in blocks/ directory
+	blockFiles, _ := os.ReadDir("blocks")
+	for _, entry := range blockFiles {
+		if !entry.IsDir() && len(entry.Name()) > 4 && entry.Name()[len(entry.Name())-4:] == ".log" {
+			os.Remove("blocks/" + entry.Name())
+			fmt.Printf("🧹 Deleted blocks/%s\n", entry.Name())
 		}
 	}
 

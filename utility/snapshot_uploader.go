@@ -84,7 +84,7 @@ func main() {
 }
 
 func compressLatestBlockFile() ([]byte, string, error) {
-	files, err := filepath.Glob("carp_blocks_*.log")
+	files, err := filepath.Glob("blocks/*.log")
 	if err != nil || len(files) == 0 {
 		return nil, "", fmt.Errorf("no block files found")
 	}

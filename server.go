@@ -159,8 +159,8 @@ func handleMempool(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleBlocks(w http.ResponseWriter, r *http.Request) {
-	// Load all carp_blocks_*.log files in order and collect all blocks
-	files, err := filepath.Glob("carp_blocks_*.log")
+	// Load all blocks/*.log files in order and collect all blocks
+	files, err := filepath.Glob("blocks/*.log")
 	if err != nil || len(files) == 0 {
 		http.Error(w, "Log files not found", http.StatusInternalServerError)
 		return
