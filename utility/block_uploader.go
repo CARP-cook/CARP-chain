@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -42,7 +43,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	compressedData, filename, err := compressStateFile()
+	compressedData, filename, err := compressLatestBlockFile()
 	if err != nil {
 		fmt.Println("❌ Compression failed:", err)
 		os.Exit(1)
@@ -82,9 +83,16 @@ func main() {
 	}
 }
 
-func compressStateFile() ([]byte, string, error) {
-	stateFile := "xu_tokens.db"
-	f, err := os.Open(stateFile)
+func compressLatestBlockFile() ([]byte, string, error) {
+	files, err := filepath.Glob("blocks/*.log")
+	if err != nil || len(files) == 0 {
+		return nil, "", fmt.Errorf("no block files found")
+	}
+
+	sort.Strings(files)
+	latest := files[len(files)-1]
+
+	f, err := os.Open(latest)
 	if err != nil {
 		return nil, "", err
 	}
@@ -98,5 +106,5 @@ func compressStateFile() ([]byte, string, error) {
 		return nil, "", err
 	}
 	gz.Close()
-	return buf.Bytes(), stateFile + ".gz", nil
+	return buf.Bytes(), latest + ".gz", nil
 }
