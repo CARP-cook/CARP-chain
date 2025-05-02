@@ -21,7 +21,9 @@ type GitHubRequest struct {
 
 type GitHubResponse struct {
 	Content struct {
-		SHA string `json:"sha"`
+		SHA      string `json:"sha"`
+		Content  string `json:"content"`
+		Encoding string `json:"encoding"`
 	} `json:"content"`
 	SHA string `json:"sha"`
 }
@@ -72,14 +74,17 @@ func main() {
 		json.Unmarshal(body, &ghResp)
 
 		existingSHA := ghResp.SHA
-		existingContent, _ := base64.StdEncoding.DecodeString(ghResp.Content.SHA)
+		decodedContent, err := base64.StdEncoding.DecodeString(ghResp.Content.Content)
+		if err != nil {
+			fmt.Println("❌ Failed to decode existing content:", err)
+			os.Exit(1)
+		}
 
-		if bytes.Equal(existingContent, fileData) {
+		if bytes.Equal(decodedContent, fileData) {
 			fmt.Println("ℹ️ No change in state file. Skipping upload.")
 			return
 		}
 
-		// Update payload with SHA
 		payload.SHA = existingSHA
 	}
 
