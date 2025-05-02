@@ -428,7 +428,7 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	confirmed := false
 	for i := 0; i < 30; i++ {
 		time.Sleep(1 * time.Second)
-		files, err := filepath.Glob("carp_blocks_*.log")
+		files, err := filepath.Glob("blocks/*.log")
 		if err != nil || len(files) == 0 {
 			continue
 		}
