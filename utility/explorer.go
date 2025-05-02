@@ -103,12 +103,6 @@ input#searchInput {
   background:rgb(238, 237, 229);
 }
 
-.block h3 {
-  font-size: 0.95rem;
-  word-break: break-word;
-  overflow-wrap: break-word;
-}
-
 .tx {
   cursor: pointer;
   color:rgb(0, 0, 0);
@@ -172,6 +166,12 @@ code {
   max-width: 100%;
 }
 
+.block h3 {
+  font-size: 0.95rem;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
 img {
   max-height: 80px;
   display: block;
@@ -211,13 +211,8 @@ img {
   }
 
   code {
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     word-break: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
-    display: inline-block;
-    width: 100%;
-    box-sizing: border-box;
   }
 
   .tx {
