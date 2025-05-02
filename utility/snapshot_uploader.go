@@ -3,7 +3,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -75,19 +74,6 @@ func main() {
 		json.Unmarshal(body, &ghResp)
 
 		existingSHA := ghResp.SHA
-		decodedContent, err := base64.StdEncoding.DecodeString(ghResp.Content.Content)
-		if err != nil {
-			fmt.Println("❌ Failed to decode existing content:", err)
-			os.Exit(1)
-		}
-
-		// Compare after trimming whitespace using SHA-256 to avoid unnecessary commits due to insignificant differences
-		localHash := sha256.Sum256(bytes.TrimSpace(fileData))
-		remoteHash := sha256.Sum256(bytes.TrimSpace(decodedContent))
-		if localHash == remoteHash {
-			fmt.Println("ℹ️ No change in state file. Skipping upload.")
-			return
-		}
 
 		payload.SHA = existingSHA
 	}
