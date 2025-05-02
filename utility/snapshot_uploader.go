@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -80,8 +81,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		// Compare after trimming whitespace to avoid unnecessary commits due to insignificant differences
-		if bytes.Equal(bytes.TrimSpace(decodedContent), bytes.TrimSpace(fileData)) {
+		// Compare after trimming whitespace using SHA-256 to avoid unnecessary commits due to insignificant differences
+		localHash := sha256.Sum256(bytes.TrimSpace(fileData))
+		remoteHash := sha256.Sum256(bytes.TrimSpace(decodedContent))
+		if localHash == remoteHash {
 			fmt.Println("ℹ️ No change in state file. Skipping upload.")
 			return
 		}
