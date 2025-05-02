@@ -20,12 +20,8 @@ type GitHubRequest struct {
 }
 
 type GitHubResponse struct {
-	Content struct {
-		SHA      string `json:"sha"`
-		Content  string `json:"content"`
-		Encoding string `json:"encoding"`
-	} `json:"content"`
-	SHA string `json:"sha"`
+	SHA     string          `json:"sha"`
+	Content json.RawMessage `json:"content"`
 }
 
 const (
