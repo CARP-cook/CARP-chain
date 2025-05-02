@@ -202,7 +202,7 @@ code {
 	  </script>
 	</head>
 	<body>
-      <img src="carp.png" alt="CARP Logo" style="height: 80px; display: block; margin: 0 auto 1em auto;" />
+      <img src="/carp.png" alt="CARP Logo" style="height: 80px; display: block; margin: 0 auto 1em auto;" />
 	  <h1>CARP Chain Block Explorer</h1>
 	  <input type="text" id="searchInput" onkeyup="searchTxs()" placeholder="🔍 Search transactions..." />
 	  {{range $i, $block := .}}
