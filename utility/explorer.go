@@ -160,7 +160,8 @@ code {
 	
 	    function toggleDetails(id) {
 	      const el = document.getElementById(id);
-	      el.style.display = el.style.display === "none" ? "block" : "none";
+	      const isHidden = window.getComputedStyle(el).display === "none";
+	      el.style.display = isHidden ? "block" : "none";
 	    }
 	
 	    function showPage(page) {
