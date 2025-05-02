@@ -50,13 +50,86 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 	  <meta charset="UTF-8">
 	  <title> CARP Chain Explorer</title>
 	  <style>
-	    body { font-family: sans-serif; }
-	    .tx { margin-left: 2em; cursor: pointer; color: blue; text-decoration: underline; }
-	    .details { display: none; margin-left: 3em; font-size: 0.9em; }
-	    .highlight { background-color: #ffeeba; }
-	    .pagination { margin-top: 1em; }
-	    .pagination button { margin-right: 0.5em; }
-	    #searchInput { width: 300px; margin-bottom: 1em; padding: 0.4em; }
+	  html {
+	    background: linear-gradient(to bottom, #d9f2e6, #e0dcbf);
+	  }
+	  *, *::before, *::after {
+	    box-sizing: border-box;
+	  }
+	  body {
+	    font-family: 'Georgia', serif;
+	    max-width: 800px;
+	    margin: auto;
+	    padding: 2em;
+	    background-color: #ffffff;
+	    color: #2e4d2c;
+	    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+	    border-radius: 10px;
+	    background-image: url('/carp_bg.png');
+	    background-size: contain;
+	    background-repeat: no-repeat;
+	    background-position: center top;
+	  }
+	  .tx {
+	    margin-left: 2em;
+	    cursor: pointer;
+	    color: #356a3a;
+	    text-decoration: underline;
+	  }
+	  .details {
+	    display: none;
+	    margin-left: 3em;
+	    font-size: 0.9em;
+	    background: #f0fff0;
+	    padding: 0.5em;
+	    border-left: 4px solid #a2c48c;
+	    border-radius: 4px;
+	  }
+	  .highlight {
+	    background-color: #ffeeba;
+	  }
+	  .pagination {
+	    margin-top: 1em;
+	    text-align: center;
+	  }
+	  .pagination button {
+	    margin: 0.3em;
+	    padding: 0.6em 1.2em;
+	    background-color: #a2c48c;
+	    font-weight: bold;
+	    border: none;
+	    border-radius: 5px;
+	  }
+	  .pagination button:hover {
+	    background-color: #89b46a;
+	    cursor: pointer;
+	  }
+	  #searchInput {
+	    width: 100%;
+	    margin-bottom: 1em;
+	    padding: 0.7em;
+	    border: 1px solid #6b8e23;
+	    background: #f9fff9;
+	    font-family: 'Georgia', serif;
+	    font-size: 1em;
+	    border-radius: 6px;
+	  }
+	  h1 {
+	    font-family: 'Georgia', serif;
+	    color: #3a5d30;
+	    text-shadow: 1px 1px 2px #cde3c5;
+	    text-align: center;
+	  }
+	  h3 {
+	    margin-top: 1.2em;
+	    color: #355835;
+	  }
+	  code {
+	    background-color: #eef7e9;
+	    padding: 0.2em 0.4em;
+	    border-radius: 3px;
+	    font-weight: bold;
+	  }
 	  </style>
 	  <script>
 	    let currentPage = 0;
