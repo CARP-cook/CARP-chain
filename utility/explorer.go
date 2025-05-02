@@ -22,7 +22,7 @@ type Block struct {
 }
 
 func main() {
-	http.Handle("/carp.png", http.FileServer(http.Dir(".")))
+	http.Handle("carp.png", http.FileServer(http.Dir("./")))
 	http.HandleFunc("/blocks", handleBlocks)
 	http.HandleFunc("/blocks/latest", handleLatestBlock)
 	http.HandleFunc("/html", handleHTML)
@@ -71,7 +71,7 @@ body {
 
 h1 {
   text-align: center;
-  color: #db9c15;
+  color:rgb(0, 0, 0);
   font-size: 2rem;
   margin-bottom: 1rem;
 }
@@ -79,7 +79,7 @@ h1 {
 h3 {
   font-size: 0.95rem;
   margin-top: 1.5rem;
-  color: #1b4332;
+  color:rgb(0, 0, 0);
 }
 
 input#searchInput {
@@ -100,7 +100,7 @@ input#searchInput {
 }
 
 .block.highlight {
-  background: #fef5b7;
+  background:rgb(238, 237, 229);
 }
 
 .block h3 {
@@ -111,7 +111,7 @@ input#searchInput {
 
 .tx {
   cursor: pointer;
-  color: #f5c030;
+  color:rgb(0, 0, 0);
   font-weight: 500;
   margin-left: 1rem;
   margin-top: 0.5rem;
@@ -120,7 +120,7 @@ input#searchInput {
 
 .details {
   display: none;
-  background: #e9f5ec;
+  background:rgb(255, 255, 255);
   padding: 0.75rem;
   border-radius: 6px;
   margin: 0.5rem 0 0 2rem;
@@ -128,7 +128,7 @@ input#searchInput {
 }
 
 .details code {
-  background: #d8f3dc;
+  background:rgb(255, 255, 255);
   padding: 2px 5px;
   border-radius: 3px;
 }
@@ -165,7 +165,7 @@ code {
   white-space: normal;
   display: inline-block;
   font-family: monospace;
-  background: #eef2f3;
+  background:rgb(255, 255, 255);
   padding: 0.2em 0.5em;
   border-radius: 3px;
   font-size: 0.95em;
@@ -295,7 +295,10 @@ img {
 	  <input type="text" id="searchInput" onkeyup="searchTxs()" placeholder="🔍 Search transactions..." />
 	  {{range $i, $block := .}}
 	    <div class="block {{if eq $i 0}}highlight{{end}}">
-	      <h3>Block {{$block.Height}} – {{$block.Timestamp}} – <code>{{$block.BlockHash}}</code></h3>
+	      <h3>
+  			Block {{$block.Height}} – {{$block.Timestamp}}<br>
+  			<code>{{$block.BlockHash}}</code>
+		 </h3>
 	      {{range $j, $tx := $block.Txs}}
 	        <div class="tx" onclick="toggleDetails('tx-{{$block.Height}}-{{$j}}')">
 	          ↪ TX: <code>{{$tx.Tx.Hash}}</code>
@@ -303,8 +306,8 @@ img {
 	        <div class="details" id="tx-{{$block.Height}}-{{$j}}">
 	          <div>Type: {{$tx.Tx.Type}}</div>
 	          <div>Amount: {{$tx.Tx.Amount}}</div>
-	          <div>From: <code>{{$tx.Tx.From}}</code></div>
-	          <div>To: <code>{{$tx.Tx.To}}</code></div>
+	          <div>From: {{$tx.Tx.From}}</div>
+	          <div>To: {{$tx.Tx.To}}</div>
 	          <div>Nonce: {{$tx.Tx.Nonce}}</div>
 	        </div>
 	      {{end}}
