@@ -9,6 +9,8 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"path/filepath"
+	"sort"
 )
 
 type Block struct {
@@ -140,49 +142,30 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 
 func loadBlocks(limit int) []Block {
 	var blocks []Block
-	file, err := os.Open("carp_blocks.log")
+	files, err := filepath.Glob("blocks/*.log")
 	if err != nil {
+		fmt.Println("⚠️ Failed to scan blocks/:", err)
 		return blocks
 	}
-	defer file.Close()
+	sort.Strings(files)
 
-	if limit <= 0 {
-		scanner := bufio.NewScanner(file)
+	for _, file := range files {
+		f, err := os.Open(file)
+		if err != nil {
+			continue
+		}
+		scanner := bufio.NewScanner(f)
 		for scanner.Scan() {
 			var b Block
 			if err := json.Unmarshal(scanner.Bytes(), &b); err == nil {
 				blocks = append(blocks, b)
 			}
 		}
-		return blocks
+		f.Close()
 	}
 
-	// Count total lines
-	totalLines := 0
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		totalLines++
+	if limit > 0 && len(blocks) > limit {
+		return blocks[len(blocks)-limit:]
 	}
-
-	// Reset file pointer to beginning
-	file.Seek(0, 0)
-	scanner = bufio.NewScanner(file)
-
-	// Skip lines until start of last 'limit' lines
-	skip := totalLines - limit
-	if skip < 0 {
-		skip = 0
-	}
-	currentLine := 0
-	for scanner.Scan() {
-		if currentLine >= skip {
-			var b Block
-			if err := json.Unmarshal(scanner.Bytes(), &b); err == nil {
-				blocks = append(blocks, b)
-			}
-		}
-		currentLine++
-	}
-
 	return blocks
 }

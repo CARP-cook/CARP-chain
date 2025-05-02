@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/ed25519"
 	"encoding/base64"
@@ -12,6 +13,8 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -46,7 +49,7 @@ func main() {
 	http.HandleFunc("/mempool", withCORS(handleMempool))
 	http.HandleFunc("/blocks", withCORS(handleBlocks))
 	http.HandleFunc("/send-multi", withCORS(handleMultiSendToMempool))
-	http.HandleFunc("/redeem-veco", withCORS(handleRedeemVeco))
+	http.HandleFunc("/redeem", withCORS(handleRedeem))
 
 	fmt.Println("🌐 CARP Chain API running at http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -156,21 +159,31 @@ func handleMempool(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleBlocks(w http.ResponseWriter, r *http.Request) {
-	data, err := os.ReadFile("carp_blocks.log")
-	if err != nil {
-		http.Error(w, "Log file not found", http.StatusInternalServerError)
+	// Load all carp_blocks_*.log files in order and collect all blocks
+	files, err := filepath.Glob("carp_blocks_*.log")
+	if err != nil || len(files) == 0 {
+		http.Error(w, "Log files not found", http.StatusInternalServerError)
 		return
 	}
-	lines := bytes.Split(data, []byte("\n"))
+	sort.Strings(files)
 	var blocks []map[string]interface{}
-	for _, line := range lines {
-		if len(line) == 0 {
+	for _, fname := range files {
+		f, err := os.Open(fname)
+		if err != nil {
 			continue
 		}
-		var b map[string]interface{}
-		if err := json.Unmarshal(line, &b); err == nil {
-			blocks = append(blocks, b)
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			line := scanner.Bytes()
+			if len(line) == 0 {
+				continue
+			}
+			var b map[string]interface{}
+			if err := json.Unmarshal(line, &b); err == nil {
+				blocks = append(blocks, b)
+			}
 		}
+		f.Close()
 	}
 	json.NewEncoder(w).Encode(blocks)
 }
@@ -228,9 +241,10 @@ func handleMultiSendToMempool(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
+func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	type RedeemRequest struct {
 		AmountCarp  int64  `json:"amount_carp"`
+		Coin        string `json:"coin"`
 		CarpAddress string `json:"carp_address"`
 		VecoAddress string `json:"veco_address"`
 		PubKey      string `json:"pubkey"`
@@ -249,6 +263,15 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 
 	req := payload.RedeemRequest
 	burnTx := payload.BurnTx
+
+	// Check supported coin
+	supportedCoins := map[string]bool{
+		"veco": true,
+	}
+	if !supportedCoins[req.Coin] {
+		http.Error(w, "Unsupported coin", http.StatusBadRequest)
+		return
+	}
 
 	// Prevent parallel redeems for the same address
 	if _, locked := pendingRedeems.Load(req.CarpAddress); locked {
@@ -273,21 +296,21 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify redeem request signature
-	message := fmt.Sprintf("%d|%s|%s", req.AmountCarp, req.CarpAddress, req.VecoAddress)
+	message := fmt.Sprintf("%d|%s|%s", req.AmountCarp, req.CarpAddress, req.Coin)
 	if !ed25519.Verify(pubKeyBytes, []byte(message), mustDecodeB64(req.Signature)) {
 		http.Error(w, "Invalid redeem signature", http.StatusBadRequest)
 		return
 	}
 
 	// Verify burnTx correctness
+	expectedType := fmt.Sprintf("redeem:%s", req.VecoAddress)
 	if !strings.HasPrefix(burnTx.Tx.Type, "redeem:") || burnTx.Tx.From != req.CarpAddress || burnTx.Tx.To != "burn" || burnTx.Tx.Amount != req.AmountCarp {
 		http.Error(w, "Burn TX does not match redeem request", http.StatusBadRequest)
 		return
 	}
-	// Optional: additionally verify the Veco address inside the type
-	expectedType := fmt.Sprintf("redeem:%s", req.VecoAddress)
+	// Additionally verify the redeem coin address inside the type
 	if burnTx.Tx.Type != expectedType {
-		http.Error(w, "Burn TX Type does not match redeem Veco address", http.StatusBadRequest)
+		http.Error(w, "Burn TX Type does not match redeem address", http.StatusBadRequest)
 		return
 	}
 	burnPubKeyBytes, err := base64.StdEncoding.DecodeString(burnTx.PubKey)
@@ -300,12 +323,23 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate Veco address
-	validateCmd := exec.Command("veco-cli", "validateaddress", req.VecoAddress)
+	// Validate target coin address and get CLI command prefix
+	var cliCmd string
+	var targetAddress string
+	switch req.Coin {
+	case "veco":
+		cliCmd = "veco-cli"
+		targetAddress = req.VecoAddress
+	default:
+		http.Error(w, "Unsupported coin", http.StatusBadRequest)
+		return
+	}
+
+	validateCmd := exec.Command(cliCmd, "validateaddress", targetAddress)
 	validateOutput, err := validateCmd.CombinedOutput()
 	if err != nil {
-		log.Println("Veco validateaddress error:", string(validateOutput))
-		http.Error(w, "Failed to validate Veco address", http.StatusInternalServerError)
+		log.Println(req.Coin, "validateaddress error:", string(validateOutput))
+		http.Error(w, "Failed to validate target address", http.StatusInternalServerError)
 		return
 	}
 	var validationResult map[string]interface{}
@@ -314,7 +348,7 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if valid, ok := validationResult["isvalid"].(bool); !ok || !valid {
-		http.Error(w, "Invalid Veco address", http.StatusBadRequest)
+		http.Error(w, "Invalid target address", http.StatusBadRequest)
 		return
 	}
 
@@ -333,7 +367,7 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Calculate required Veco
+	// Calculate required target coin amount
 	quoteStr := os.Getenv("CARP_REDEEM_QUOTE")
 	if quoteStr == "" {
 		quoteStr = "1000"
@@ -343,23 +377,23 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid redeem quote", http.StatusInternalServerError)
 		return
 	}
-	vecoAmount := float64(req.AmountCarp) / quote
+	targetAmount := float64(req.AmountCarp) / quote
 
-	// Check available Veco balance
-	balanceCmd := exec.Command("veco-cli", "getbalance")
+	// Check available target coin balance
+	balanceCmd := exec.Command(cliCmd, "getbalance")
 	balanceOutput, err := balanceCmd.CombinedOutput()
 	if err != nil {
-		log.Println("Veco getbalance error:", string(balanceOutput))
-		http.Error(w, "Failed to check Veco balance", http.StatusInternalServerError)
+		log.Println(req.Coin, "getbalance error:", string(balanceOutput))
+		http.Error(w, "Failed to check target coin balance", http.StatusInternalServerError)
 		return
 	}
-	vecoBalance, err := strconv.ParseFloat(string(bytes.TrimSpace(balanceOutput)), 64)
+	targetBalance, err := strconv.ParseFloat(string(bytes.TrimSpace(balanceOutput)), 64)
 	if err != nil {
-		http.Error(w, "Invalid Veco balance format", http.StatusInternalServerError)
+		http.Error(w, "Invalid target coin balance format", http.StatusInternalServerError)
 		return
 	}
-	if vecoBalance < vecoAmount {
-		http.Error(w, fmt.Sprintf("Insufficient Veco balance: available %.8f, needed %.8f", vecoBalance, vecoAmount), http.StatusPaymentRequired)
+	if targetBalance < targetAmount {
+		http.Error(w, fmt.Sprintf("Insufficient %s balance: available %.8f, needed %.8f", req.Coin, targetBalance, targetAmount), http.StatusPaymentRequired)
 		return
 	}
 
@@ -394,11 +428,22 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 	confirmed := false
 	for i := 0; i < 30; i++ {
 		time.Sleep(1 * time.Second)
-		data, err := os.ReadFile("carp_blocks.log")
+		files, err := filepath.Glob("carp_blocks_*.log")
+		if err != nil || len(files) == 0 {
+			continue
+		}
+		sort.Strings(files)
+		latestFile := files[len(files)-1]
+		f, err := os.Open(latestFile)
 		if err != nil {
 			continue
 		}
-		lines := bytes.Split(data, []byte("\n"))
+		var lines [][]byte
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			lines = append(lines, append([]byte(nil), scanner.Bytes()...))
+		}
+		f.Close()
 		if len(lines) > 1000 {
 			lines = lines[len(lines)-1000:]
 		}
@@ -446,12 +491,12 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 	updated, _ := json.MarshalIndent(usedTxs, "", "  ")
 	os.WriteFile(usedTxsFile, updated, 0644)
 
-	// 2. Send Veco
-	sendCmd := exec.Command("veco-cli", "sendtoaddress", req.VecoAddress, fmt.Sprintf("%.8f", vecoAmount))
+	// 2. Send target coin
+	sendCmd := exec.Command(cliCmd, "sendtoaddress", targetAddress, fmt.Sprintf("%.8f", targetAmount))
 	sendOutput, err := sendCmd.CombinedOutput()
 	if err != nil {
-		log.Println("Veco send error:", string(sendOutput))
-		http.Error(w, "Failed to send Veco coins", http.StatusInternalServerError)
+		log.Println(req.Coin, "send error:", string(sendOutput))
+		http.Error(w, "Failed to send target coin", http.StatusInternalServerError)
 		return
 	}
 
@@ -459,10 +504,10 @@ func handleRedeemVeco(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":      "success",
-		"carp_burned": req.AmountCarp,
-		"veco_sent":   fmt.Sprintf("%.8f", vecoAmount),
-		"veco_txid":   txid,
+		"status":                         "success",
+		"carp_burned":                    req.AmountCarp,
+		fmt.Sprintf("%s_sent", req.Coin): fmt.Sprintf("%.8f", targetAmount),
+		fmt.Sprintf("%s_txid", req.Coin): txid,
 	})
 }
 

@@ -7,17 +7,27 @@ import (
 )
 
 const (
-	genesisAddr  = "Caeee0442cce"
-	genesisFunds = 10000
+	genesisAddr  = "Cadcc809699584cca9"
+	genesisFunds = 10000000
 )
 
 func main() {
 	// Remove all persistent state
-	files := []string{"carp_blocks.log", "carp_mempool.json", "carp_state.json"}
+	files := []string{"carp_mempool.json", "carp_state.json"}
 	for _, f := range files {
 		err := os.Remove(f)
 		if err == nil {
 			fmt.Printf("🧹 Deleted %s\n", f)
+		}
+	}
+
+	// Delete all carp_blocks_*.log files
+	entries, _ := os.ReadDir(".")
+	for _, entry := range entries {
+		name := entry.Name()
+		if !entry.IsDir() && len(name) > 16 && name[:14] == "carp_blocks_" && name[len(name)-4:] == ".log" {
+			os.Remove(name)
+			fmt.Printf("🧹 Deleted %s\n", name)
 		}
 	}
 

@@ -10,6 +10,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
+	"sort"
 	"time"
 )
 
@@ -29,9 +31,10 @@ type GitHubResponse struct {
 const (
 	repoOwner = "tedydet"
 	repoName  = "xu-chain-backup-test"
-	filePath  = "carp_blocks.log.gz" // compressed snapshot
 	branch    = "main"
 )
+
+var filePath string
 
 func main() {
 	token := os.Getenv("GITHUB_TOKEN")
@@ -40,11 +43,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	compressedData, err := compressFile("carp_blocks.log")
+	compressedData, filename, err := compressLatestBlockFile()
 	if err != nil {
 		fmt.Println("❌ Compression failed:", err)
 		os.Exit(1)
 	}
+
+	filePath = filepath.Base(filename)
 
 	b64Content := base64.StdEncoding.EncodeToString(compressedData)
 
@@ -78,20 +83,28 @@ func main() {
 	}
 }
 
-func compressFile(filename string) ([]byte, error) {
-	in, err := os.Open(filename)
-	if err != nil {
-		return nil, err
+func compressLatestBlockFile() ([]byte, string, error) {
+	files, err := filepath.Glob("carp_blocks_*.log")
+	if err != nil || len(files) == 0 {
+		return nil, "", fmt.Errorf("no block files found")
 	}
-	defer in.Close()
+
+	sort.Strings(files)
+	latest := files[len(files)-1]
+
+	f, err := os.Open(latest)
+	if err != nil {
+		return nil, "", err
+	}
+	defer f.Close()
 
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
-	_, err = io.Copy(gz, in)
-	gz.Close()
-
+	_, err = io.Copy(gz, f)
 	if err != nil {
-		return nil, err
+		gz.Close()
+		return nil, "", err
 	}
-	return buf.Bytes(), nil
+	gz.Close()
+	return buf.Bytes(), latest + ".gz", nil
 }

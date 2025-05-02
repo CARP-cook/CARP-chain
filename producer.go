@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -22,8 +23,13 @@ func init() {
 
 const (
 	mempoolFile = "carp_mempool.json"
-	blocksFile  = "carp_blocks.log"
 )
+
+func getBlockLogFilename(height int) string {
+	start := (height / 10000) * 10000
+	end := start + 9999
+	return fmt.Sprintf("blocks/%06d-%06d.log", start, end)
+}
 
 func main() {
 	carpApp := app.NewCarpApp()
@@ -138,7 +144,17 @@ func appendBlockToLog(height int, txs []app.SignedTx) {
 	}
 
 	data, _ := json.Marshal(entry)
-	f, _ := os.OpenFile(blocksFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	filename := getBlockLogFilename(height)
+	err := os.MkdirAll(filepath.Dir(filename), 0755)
+	if err != nil {
+		fmt.Println("❌ Failed to create blocks directory:", err)
+		return
+	}
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("❌ Failed to open block log file:", err)
+		return
+	}
 	defer f.Close()
 	f.Write(append(data, '\n'))
 	fmt.Printf("🧱 Block %d written to log (%d TXs)\n", height, len(txs))
@@ -154,10 +170,32 @@ func emptyMempool() {
 }
 
 func getLastBlockHeight() int {
-	data, err := os.ReadFile(blocksFile)
+	dir := "blocks"
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		// If blocks directory doesn't exist or can't be read, return 0
+		return 0
+	}
+
+	var logFiles []string
+	for _, f := range files {
+		if !f.IsDir() && strings.HasSuffix(f.Name(), ".log") {
+			logFiles = append(logFiles, f.Name())
+		}
+	}
+	if len(logFiles) == 0 {
+		return 0
+	}
+
+	sort.Strings(logFiles)
+	lastLogFile := logFiles[len(logFiles)-1]
+	filePath := filepath.Join(dir, lastLogFile)
+
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return 0
 	}
+
 	lines := bytes.Split(data, []byte("\n"))
 	for i := len(lines) - 1; i >= 0; i-- {
 		if len(lines[i]) == 0 {
