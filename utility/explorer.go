@@ -148,10 +148,26 @@ input#searchInput {
 }
 
 code {
+  word-break: break-all;
+  white-space: normal;
+  display: inline-block;
   font-family: monospace;
   background: #eef2f3;
   padding: 0.2em 0.5em;
   border-radius: 3px;
+  font-size: 0.95em;
+  max-width: 100%;
+}
+@media (max-width: 768px) {
+  code {
+    font-size: 0.85em;
+    word-break: break-word;
+  }
+  input#searchInput {
+    font-size: 1.1em;
+    padding: 1em;
+    margin-bottom: 2em;
+  }
 }
 	  </style>
 	  <script>
