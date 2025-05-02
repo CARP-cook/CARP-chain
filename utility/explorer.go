@@ -22,7 +22,7 @@ type Block struct {
 }
 
 func main() {
-	http.Handle("carp.png", http.FileServer(http.Dir("./")))
+	http.Handle("/carp.png", http.FileServer(http.Dir(".")))
 	http.HandleFunc("/blocks", handleBlocks)
 	http.HandleFunc("/blocks/latest", handleLatestBlock)
 	http.HandleFunc("/html", handleHTML)
