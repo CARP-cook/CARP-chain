@@ -53,6 +53,27 @@ func main() {
 
 	b64Content := base64.StdEncoding.EncodeToString(fileData)
 
+	// Check if remote file exists and compare SHA
+	shaReq, _ := http.NewRequest("GET", url, nil)
+	shaReq.Header.Set("Authorization", "Bearer "+token)
+	shaReq.Header.Set("Accept", "application/vnd.github+json")
+
+	shaResp, err := http.DefaultClient.Do(shaReq)
+	var ghResp GitHubResponse
+	if err == nil && shaResp.StatusCode == 200 {
+		defer shaResp.Body.Close()
+		body, _ := io.ReadAll(shaResp.Body)
+		json.Unmarshal(body, &ghResp)
+
+		// Compare with existing content
+		existingContentB64 := ghResp.Content.Content
+		existingDecoded, err := base64.StdEncoding.DecodeString(existingContentB64)
+		if err == nil && bytes.Equal(existingDecoded, fileData) {
+			fmt.Println("ℹ️ No changes detected. Skipping upload.")
+			return
+		}
+	}
+
 	payload := GitHubRequest{
 		Message: fmt.Sprintf("Snapshot upload %s", time.Now().Format(time.RFC3339)),
 		Content: b64Content,
@@ -60,22 +81,8 @@ func main() {
 	}
 
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", repoOwner, repoName, filePath)
-
-	// Check if remote file exists and compare SHA
-	shaReq, _ := http.NewRequest("GET", url, nil)
-	shaReq.Header.Set("Authorization", "Bearer "+token)
-	shaReq.Header.Set("Accept", "application/vnd.github+json")
-
-	shaResp, err := http.DefaultClient.Do(shaReq)
-	if err == nil && shaResp.StatusCode == 200 {
-		defer shaResp.Body.Close()
-		var ghResp GitHubResponse
-		body, _ := io.ReadAll(shaResp.Body)
-		json.Unmarshal(body, &ghResp)
-
-		existingSHA := ghResp.SHA
-
-		payload.SHA = existingSHA
+	if ghResp.SHA != "" {
+		payload.SHA = ghResp.SHA
 	}
 
 	data, _ := json.Marshal(payload)
