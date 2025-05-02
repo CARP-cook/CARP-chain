@@ -22,7 +22,7 @@ type Block struct {
 }
 
 func main() {
-	http.Handle("/carp.png", http.FileServer(http.Dir(".")))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	http.HandleFunc("/blocks", handleBlocks)
 	http.HandleFunc("/blocks/latest", handleLatestBlock)
 	http.HandleFunc("/html", handleHTML)
@@ -285,7 +285,7 @@ img {
 	  </script>
 	</head>
 	<body>
-      <img src="/carp.png" alt="CARP Logo" />
+      <img src="/static/carp.png" alt="CARP Logo" />
 	  <h1>CARP Explorer</h1>
 	  <input type="text" id="searchInput" onkeyup="searchTxs()" placeholder="🔍 Search transactions..." />
 	  {{range $i, $block := .}}
