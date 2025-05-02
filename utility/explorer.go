@@ -25,6 +25,7 @@ func main() {
 	http.HandleFunc("/blocks", handleBlocks)
 	http.HandleFunc("/blocks/latest", handleLatestBlock)
 	http.HandleFunc("/html", handleHTML)
+	http.HandleFunc("/", handleHTML)
 	fmt.Println("🔍 CARP Chain Block Explorer available at http://localhost:8081")
 	http.ListenAndServe(":8081", nil)
 }
@@ -51,86 +52,106 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 	  <meta charset="UTF-8">
 	  <title> CARP Chain Explorer</title>
 	  <style>
-	  html {
-	    background: linear-gradient(to bottom, #d9f2e6, #e0dcbf);
-	  }
-	  *, *::before, *::after {
-	    box-sizing: border-box;
-	  }
-	  body {
-	    font-family: 'Georgia', serif;
-	    max-width: 800px;
-	    margin: auto;
-	    padding: 2em;
-	    background-color: #ffffff;
-	    color: #2e4d2c;
-	    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-	    border-radius: 10px;
-	    background-image: url('/carp_bg.png');
-	    background-size: contain;
-	    background-repeat: no-repeat;
-	    background-position: center top;
-	  }
-	  .tx {
-	    margin-left: 2em;
-	    cursor: pointer;
-	    color: #356a3a;
-	    text-decoration: underline;
-	  }
-	  .details {
-	    display: none;
-	    margin-left: 3em;
-	    font-size: 0.9em;
-	    background: #f0fff0;
-	    padding: 0.5em;
-	    border-left: 4px solid #a2c48c;
-	    border-radius: 4px;
-	  }
-	  .highlight {
-	    background-color: #ffeeba;
-	  }
-	  .pagination {
-	    margin-top: 1em;
-	    text-align: center;
-	  }
-	  .pagination button {
-	    margin: 0.3em;
-	    padding: 0.6em 1.2em;
-	    background-color: #a2c48c;
-	    font-weight: bold;
-	    border: none;
-	    border-radius: 5px;
-	  }
-	  .pagination button:hover {
-	    background-color: #89b46a;
-	    cursor: pointer;
-	  }
-	  #searchInput {
-	    width: 100%;
-	    margin-bottom: 1em;
-	    padding: 0.7em;
-	    border: 1px solid #6b8e23;
-	    background: #f9fff9;
-	    font-family: 'Georgia', serif;
-	    font-size: 1em;
-	    border-radius: 6px;
-	  }
-	  h1 {
-	    font-family: 'Georgia', serif;
-	    color: #3a5d30;
-	    text-shadow: 1px 1px 2px #cde3c5;
-	    text-align: center;
-	  }
-	  h3 {
-	    margin-top: 1.2em;
-	    color: #355835;
-	  }
-	  code {
-	    background-color: #eef7e9;
-	    padding: 0.2em 0.4em;
-	    border-radius: 3px;
-	    font-weight: bold;
-	  }
+html {
+  background: #f5f7fa;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+body {
+  max-width: 900px;
+  margin: auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+  text-align: center;
+  color: #2d6a4f;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+h3 {
+  font-size: 1.1rem;
+  margin-top: 1.5rem;
+  color: #1b4332;
+}
+
+input#searchInput {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+}
+
+.block {
+  background: #f9fbfc;
+  padding: 1rem;
+  border-left: 4px solid #52b788;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.block.highlight {
+  background: #d8f3dc;
+}
+
+.tx {
+  cursor: pointer;
+  color: #40916c;
+  font-weight: 500;
+  margin-left: 1rem;
+  margin-top: 0.5rem;
+}
+
+.details {
+  display: none;
+  background: #e9f5ec;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin: 0.5rem 0 0 2rem;
+  font-size: 0.9rem;
+}
+
+.details code {
+  background: #d8f3dc;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+.pagination {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.pagination button {
+  padding: 0.6rem 1.2rem;
+  margin: 0.3rem;
+  border: none;
+  border-radius: 6px;
+  background-color: #52b788;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+code {
+  font-family: monospace;
+  background: #eef2f3;
+  padding: 0.2em 0.5em;
+  border-radius: 3px;
+}
 	  </style>
 	  <script>
 	    let currentPage = 0;
