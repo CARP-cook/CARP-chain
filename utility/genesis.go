@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 )
 
 const (
@@ -44,4 +45,30 @@ func main() {
 	os.WriteFile("carp_state.json", data, 0644)
 
 	fmt.Printf("✅ CARP Chain reset. %d CARP minted to %s\n", genesisFunds, genesisAddr)
+
+	// Write the first genesis block
+	os.MkdirAll("blocks", 0755)
+	block := map[string]interface{}{
+		"height":    0,
+		"timestamp": time.Now().Format(time.RFC3339),
+		"blockhash": "genesis",
+		"txs": []map[string]interface{}{
+			{
+				"tx": map[string]interface{}{
+					"type":   "mint",
+					"from":   "GENESIS",
+					"to":     genesisAddr,
+					"amount": genesisFunds,
+					"nonce":  0,
+					"hash":   "genesis",
+				},
+				"hash": "genesis",
+			},
+		},
+	}
+	blockData, _ := json.Marshal(block)
+	f, _ := os.OpenFile("blocks/000000-009999.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	defer f.Close()
+	f.Write(append(blockData, '\n'))
+	fmt.Println("🧱 Genesis block written to blocks/000000-009999.log")
 }
