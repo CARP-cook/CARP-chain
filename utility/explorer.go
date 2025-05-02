@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 )
 
 type Block struct {
@@ -209,6 +210,12 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 	// Reverse blocks to show the newest block first
 	for i, j := 0, len(blocks)-1; i < j; i, j = i+1, j-1 {
 		blocks[i], blocks[j] = blocks[j], blocks[i]
+	}
+	for i := range blocks {
+		parsedTime, err := time.Parse(time.RFC3339, blocks[i].Timestamp)
+		if err == nil {
+			blocks[i].Timestamp = parsedTime.Format("2006-01-02 15:04:05")
+		}
 	}
 	t.Execute(w, blocks)
 }
