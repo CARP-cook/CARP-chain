@@ -80,7 +80,8 @@ func main() {
 			os.Exit(1)
 		}
 
-		if bytes.Equal(decodedContent, fileData) {
+		// Compare after trimming whitespace to avoid unnecessary commits due to insignificant differences
+		if bytes.Equal(bytes.TrimSpace(decodedContent), bytes.TrimSpace(fileData)) {
 			fmt.Println("ℹ️ No change in state file. Skipping upload.")
 			return
 		}
