@@ -56,8 +56,8 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 html {
   background: #f5f7fa;
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 1rem;
-  color: #2c6e49;
+  font-size: 16px;
+  color: #2c3e50;
 }
 
 body {
@@ -67,82 +67,76 @@ body {
   background: white;
   border-radius: 12px;
   box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
-  font-size: 1rem;
-  color: #2c6e49;
 }
 
 h1 {
   text-align: center;
-  color: #2c6e49;
-  font-size: 1rem;
+  color: #2d6a4f;
+  font-size: 2rem;
   margin-bottom: 1rem;
 }
 
 h3 {
-  font-size: 1rem;
+  font-size: 0.95rem;
   margin-top: 1.5rem;
-  color: #2c6e49;
+  color: #1b4332;
 }
 
 input#searchInput {
   width: 100%;
-  padding: 0.8rem;
-  border: 1px solid #2c6e49;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
   border-radius: 8px;
   margin-bottom: 1.5rem;
   font-size: 1rem;
-  background: #f2f2f2;
-  color: #2c6e49;
 }
 
 .block {
   background: #f9fbfc;
   padding: 1rem;
-  border-left: 4px solid #2c6e49;
+  border-left: 4px solid #52b788;
   border-radius: 8px;
   margin-bottom: 1rem;
 }
 
 .block.highlight {
-  background: #e6f4ea;
+  background: #d8f3dc;
 }
 
 .block h3 {
-  font-size: 1rem;
+  font-size: 0.95rem;
   word-break: break-word;
   overflow-wrap: break-word;
-  color: #2c6e49;
 }
 
 .tx {
   cursor: pointer;
-  color: #2c6e49;
+  color: #40916c;
   font-weight: 500;
-  margin: 0.5rem 0;
-  font-size: 1rem;
-  display: block;
+  margin-left: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
 }
 
 .details {
   display: none;
-  background: #e6f4ea;
+  background: #e9f5ec;
   padding: 0.75rem;
   border-radius: 6px;
   margin: 0.5rem 0 0 2rem;
-  font-size: 1rem;
-  color: #2c6e49;
+  font-size: 0.9rem;
 }
 
-code {
-  font-size: 1rem;
-  word-break: break-word;
-  white-space: normal;
+.details code {
+  background: #d8f3dc;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+/* Added to ensure .tx code has display:block and white-space: normal */
+.tx code {
   display: block;
-  background: #f2f2f2;
-  padding: 0.4em 0.6em;
-  border-radius: 4px;
-  font-family: monospace;
-  color: #2c6e49;
+  white-space: normal;
 }
 
 .pagination {
@@ -155,7 +149,7 @@ code {
   margin: 0.3rem;
   border: none;
   border-radius: 6px;
-  background-color: #2c6e49;
+  background-color: #52b788;
   color: white;
   font-weight: bold;
   cursor: pointer;
@@ -166,6 +160,18 @@ code {
   cursor: not-allowed;
 }
 
+code {
+  word-break: break-all;
+  white-space: normal;
+  display: inline-block;
+  font-family: monospace;
+  background: #eef2f3;
+  padding: 0.2em 0.5em;
+  border-radius: 3px;
+  font-size: 0.95em;
+  max-width: 100%;
+}
+
 img {
   max-height: 80px;
   display: block;
@@ -174,58 +180,64 @@ img {
 
 @media (max-width: 768px) {
   html {
-    font-size: 1rem;
+    font-size: 15px;
   }
 
   body {
     padding: 1rem;
-    font-size: 1rem;
   }
 
   h1 {
-    font-size: 1rem;
+    font-size: 1.6rem;
     margin-bottom: 1rem;
   }
 
   input#searchInput {
     font-size: 1rem;
-    padding: 0.8rem;
+    padding: 0.75rem;
     width: 100%;
     box-sizing: border-box;
     height: auto;
-    min-height: 44px;
+    min-height: 48px;
+  }
+
+  input#searchInput::placeholder {
+    font-size: 1rem;
   }
 
   .block h3 {
-    font-size: 1rem;
+    font-size: 0.95rem;
     word-break: break-word;
   }
 
   code {
-    font-size: 1rem;
+    font-size: 0.8rem;
     word-break: break-word;
     overflow-wrap: break-word;
     white-space: normal;
-    display: block;
-    background: #f2f2f2;
-    padding: 0.4em 0.6em;
-    border-radius: 4px;
-    font-family: monospace;
-    color: #2c6e49;
+    display: inline-block;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .tx {
-    font-size: 1rem;
-    margin: 0.5rem 0;
+    font-size: 0.95rem;
+    margin-left: 0.5rem;
     display: block;
-    color: #2c6e49;
+    word-wrap: break-word;
+  }
+
+  .tx code, .details code {
+    font-size: 1rem;
+    display: block;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
   }
 
   .details {
     font-size: 1rem;
     margin-left: 1rem;
-    background: #e6f4ea;
-    color: #2c6e49;
   }
 }
 	  </style>
