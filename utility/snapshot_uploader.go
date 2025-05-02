@@ -53,6 +53,8 @@ func main() {
 
 	b64Content := base64.StdEncoding.EncodeToString(fileData)
 
+	// Prepare URL for GitHub API
+	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", repoOwner, repoName, filePath)
 	// Check if remote file exists and compare SHA
 	shaReq, _ := http.NewRequest("GET", url, nil)
 	shaReq.Header.Set("Authorization", "Bearer "+token)
@@ -79,8 +81,6 @@ func main() {
 		Content: b64Content,
 		Branch:  branch,
 	}
-
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s", repoOwner, repoName, filePath)
 	if ghResp.SHA != "" {
 		payload.SHA = ghResp.SHA
 	}
