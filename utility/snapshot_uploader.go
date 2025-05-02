@@ -26,8 +26,8 @@ type GitHubResponse struct {
 }
 
 const (
-	repoOwner = "tedydet"
-	repoName  = "xu-chain-backup-test"
+	repoOwner = "CARP-cook"
+	repoName  = "CARP-snapshots"
 	branch    = "main"
 )
 
