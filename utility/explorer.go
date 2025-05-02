@@ -54,58 +54,64 @@ func handleHTML(w http.ResponseWriter, r *http.Request) {
 	  <title> CARP Chain Explorer</title>
 	  <style>
 html {
-  background: #f5f7fa;
+  background: #0e1a1a;
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 16px;
-  color: #2c3e50;
+  color: #d4e9d2;
 }
 
 body {
   max-width: 900px;
-  margin: auto;
+  margin: 3rem auto;
   padding: 2rem;
-  background: white;
+  background: #1b2b2b;
   border-radius: 12px;
-  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
 }
 
-h1 {
+h1, h2 {
   text-align: center;
-  color:rgb(0, 0, 0);
-  font-size: 2rem;
-  margin-bottom: 1rem;
+  color: #a9d6b4;
+  margin-bottom: 1.5rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
 
 h3 {
-  font-size: 0.95rem;
-  margin-top: 1.5rem;
-  color:rgb(0, 0, 0);
+  font-size: 1rem;
+  color: #e0f2e9;
 }
 
 input#searchInput {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ccc;
+  padding: 0.8rem;
+  border: 1px solid #2e4f4f;
   border-radius: 8px;
   margin-bottom: 1.5rem;
   font-size: 1rem;
+  background: #102020;
+  color: #e0f2e9;
+}
+
+input#searchInput::placeholder {
+  color: #b0ccc0;
 }
 
 .block {
-  background: #f9fbfc;
+  background: #162626;
   padding: 1rem;
-  border-left: 4px solidrgb(132, 165, 255);
+  border-left: 4px solid #52b788;
   border-radius: 8px;
   margin-bottom: 1rem;
 }
 
 .block.highlight {
-  background:rgb(238, 237, 229);
+  background: #1f3a3a;
 }
 
 .tx {
   cursor: pointer;
-  color:rgb(0, 0, 0);
+  color: #c3f2d4;
   font-weight: 500;
   margin-left: 1rem;
   margin-top: 0.5rem;
@@ -114,23 +120,29 @@ input#searchInput {
 
 .details {
   display: none;
-  background:rgb(255, 255, 255);
+  background: #213030;
   padding: 0.75rem;
   border-radius: 6px;
   margin: 0.5rem 0 0 2rem;
   font-size: 0.9rem;
+  color: #e0f2e9;
 }
 
 .details code {
-  background:rgb(255, 255, 255);
+  background: #2a3c3c;
   padding: 2px 5px;
   border-radius: 3px;
+  color: #def8e8;
 }
 
-/* Added to ensure .tx code has display:block and white-space: normal */
 .tx code {
   display: block;
   white-space: normal;
+  background: #2a3c3c;
+  padding: 0.3em 0.5em;
+  border-radius: 3px;
+  font-size: 0.95em;
+  color: #d3f8e2;
 }
 
 .pagination {
@@ -143,14 +155,14 @@ input#searchInput {
   margin: 0.3rem;
   border: none;
   border-radius: 6px;
-  background-color: #db9c15;
-  color: white;
+  background-color: #74c69d;
+  color: #0e1a1a;
   font-weight: bold;
   cursor: pointer;
 }
 
 .pagination button:disabled {
-  background: #ccc;
+  background: #555;
   cursor: not-allowed;
 }
 
@@ -159,17 +171,12 @@ code {
   white-space: normal;
   display: inline-block;
   font-family: monospace;
-  background:rgb(255, 255, 255);
+  background: #2a3c3c;
   padding: 0.2em 0.5em;
   border-radius: 3px;
   font-size: 0.95em;
   max-width: 100%;
-}
-
-.block h3 {
-  font-size: 0.95rem;
-  word-break: break-word;
-  overflow-wrap: break-word;
+  color: #d3f8e2;
 }
 
 img {
@@ -195,22 +202,10 @@ img {
   input#searchInput {
     font-size: 1rem;
     padding: 0.75rem;
-    width: 100%;
-    box-sizing: border-box;
-    height: auto;
     min-height: 48px;
   }
 
-  input#searchInput::placeholder {
-    font-size: 1rem;
-  }
-
   .block h3 {
-    font-size: 0.95rem;
-    word-break: break-word;
-  }
-
-  code {
     font-size: 0.95rem;
     word-break: break-word;
   }
@@ -226,7 +221,6 @@ img {
     font-size: 1rem;
     display: block;
     word-break: break-word;
-    overflow-wrap: break-word;
     white-space: normal;
   }
 
