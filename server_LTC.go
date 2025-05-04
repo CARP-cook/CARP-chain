@@ -44,6 +44,8 @@ func init() {
 
 func main() {
 	CarpApp = app.NewCarpApp()
+	log.SetOutput(os.Stdout)
+	log.Println("✅ Server log started")
 
 	http.HandleFunc("/balance", withCORS(handleBalance))
 	http.HandleFunc("/nonce", withCORS(handleNonce))
@@ -244,6 +246,13 @@ func handleMultiSendToMempool(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleRedeem(w http.ResponseWriter, r *http.Request) {
+	log.Println("📥 handleRedeem called")
+
+	body, _ := io.ReadAll(r.Body)
+	log.Println("📦 Raw body:", string(body))
+	r.Body = io.NopCloser(bytes.NewReader(body)) // reset for decoding
+
+	log.Println("📥 Incoming redeem request")
 	type RedeemRequest struct {
 		AmountCarp    int64  `json:"amount_carp"`
 		Coin          string `json:"coin"`
@@ -259,9 +268,11 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 
 	var payload RedeemPayload
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		log.Println("❌ Failed to decode JSON payload:", err)
 		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
 		return
 	}
+	log.Println("🧾 Decoded payload:", payload.RedeemRequest.PubKey)
 
 	var cliMap = map[string]string{
 		"veco": "veco-cli",
@@ -312,13 +323,15 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 
 	// Decode public key
 	pubKeyBytes, err := base64.StdEncoding.DecodeString(req.PubKey)
+	log.Println("🔍 Redeem pubkey (base64):", req.PubKey)
+	log.Println("🔍 Redeem pubkey (bytes):", len(pubKeyBytes), "bytes:", fmt.Sprintf("%x", pubKeyBytes))
 	if err != nil || len(pubKeyBytes) != ed25519.PublicKeySize {
 		http.Error(w, "Invalid public key", http.StatusBadRequest)
 		return
 	}
 
 	// Verify redeem request signature
-	message := fmt.Sprintf("%d|%s|%s", req.AmountCarp, req.CarpAddress, req.TargetAddress)
+	message := fmt.Sprintf("%d|%s|%s", req.AmountCarp, req.CarpAddress, req.Coin)
 	if !ed25519.Verify(pubKeyBytes, []byte(message), mustDecodeB64(req.Signature)) {
 		http.Error(w, "Invalid redeem signature", http.StatusBadRequest)
 		return
@@ -336,6 +349,8 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	burnPubKeyBytes, err := base64.StdEncoding.DecodeString(burnTx.PubKey)
+	log.Println("🔥 Burn pubkey (base64):", burnTx.PubKey)
+	log.Println("🔥 Burn pubkey (bytes):", len(burnPubKeyBytes), "bytes:", fmt.Sprintf("%x", burnPubKeyBytes))
 	if err != nil || len(burnPubKeyBytes) != ed25519.PublicKeySize {
 		http.Error(w, "Invalid burn TX public key", http.StatusBadRequest)
 		return
@@ -369,6 +384,11 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Nonce check
+	currentNonce := freshApp.GetNonce(req.CarpAddress)
+	if burnTx.Tx.Nonce != currentNonce+1 {
+		http.Error(w, fmt.Sprintf("Invalid nonce: expected %d, got %d", currentNonce+1, burnTx.Tx.Nonce), http.StatusBadRequest)
+		return
+	}
 
 	// Validate target coin address and get CLI command prefix
 	var validateCmd *exec.Cmd

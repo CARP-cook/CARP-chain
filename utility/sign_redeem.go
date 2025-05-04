@@ -1,4 +1,3 @@
-// redeem_veco.go – CLI tool to create a redeem request and signed burn TX (Type: redeem:<Target Address>)
 package main
 
 import (
@@ -8,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -39,13 +39,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Decode private key
-	privKey, err := base64.StdEncoding.DecodeString(*privB64)
-	if err != nil || len(privKey) != ed25519.PrivateKeySize {
+	// Decode private key (support seed (32B) or full key (64B))
+	privBytes, err := base64.StdEncoding.DecodeString(*privB64)
+	if err != nil || (len(privBytes) != ed25519.SeedSize && len(privBytes) != ed25519.PrivateKeySize) {
 		fmt.Println("❌ Invalid private key")
 		os.Exit(1)
 	}
-	pubKey := privKey[32:]
+	var privKey ed25519.PrivateKey
+	if len(privBytes) == ed25519.SeedSize {
+		privKey = ed25519.NewKeyFromSeed(privBytes)
+	} else {
+		privKey = privBytes
+	}
+	pubKey := privKey.Public().(ed25519.PublicKey)
 	pubB64 := base64.StdEncoding.EncodeToString(pubKey)
 
 	// Build redeem request
@@ -94,4 +100,25 @@ func main() {
 
 	out, _ := json.MarshalIndent(payload, "", "  ")
 	fmt.Println(string(out))
+}
+
+func handleRedeem(req RedeemRequest, burnTx app.SignedTx) error {
+	pubKeyBytes, err := base64.StdEncoding.DecodeString(req.PubKey)
+	log.Println("📥 Incoming redeem pubkey (b64):", req.PubKey)
+	log.Println("🔎 Decoded pubkey length:", len(pubKeyBytes), "expected:", ed25519.PublicKeySize)
+	log.Println("🧬 Decoded pubkey (hex):", fmt.Sprintf("%x", pubKeyBytes))
+	if err != nil || len(pubKeyBytes) != ed25519.PublicKeySize {
+		return fmt.Errorf("invalid redeem pubkey")
+	}
+
+	burnPubKeyBytes, err := base64.StdEncoding.DecodeString(burnTx.PubKey)
+	log.Println("📥 Incoming burnTx pubkey (b64):", burnTx.PubKey)
+	log.Println("🔎 Decoded pubkey length:", len(burnPubKeyBytes), "expected:", ed25519.PublicKeySize)
+	log.Println("🧬 Decoded pubkey (hex):", fmt.Sprintf("%x", burnPubKeyBytes))
+	if err != nil || len(burnPubKeyBytes) != ed25519.PublicKeySize {
+		return fmt.Errorf("invalid burnTx pubkey")
+	}
+
+	// ... rest of the function ...
+	return nil
 }

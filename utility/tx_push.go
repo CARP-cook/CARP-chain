@@ -13,7 +13,7 @@ import (
 
 func main() {
 	file := flag.String("file", "", "Path to signed transaction JSON file")
-	api := flag.String("api", "http://localhost:8080/send", "XuChain /send endpoint")
+	api := flag.String("api", "http://localhost:8080/send", "Carp /send endpoint")
 	flag.Parse()
 
 	if *file == "" {
