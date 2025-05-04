@@ -269,10 +269,20 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	}
 	req := payload.RedeemRequest
 	burnTx := payload.BurnTx
-	cliCmd, ok := cliMap[req.Coin]
-	if !ok {
-		http.Error(w, "Unsupported coin", http.StatusBadRequest)
-		return
+
+	// Prepare redeem quote
+	var quoteStr string
+	switch req.Coin {
+	case "veco":
+		quoteStr = os.Getenv("CARP_REDEEM_QUOTE")
+		if quoteStr == "" {
+			quoteStr = "1000"
+		}
+	case "ltc":
+		quoteStr = os.Getenv("CARP_REDEEM_QUOTE_LTC")
+		if quoteStr == "" {
+			quoteStr = "71000000"
+		}
 	}
 
 	// Check supported coin
@@ -361,7 +371,6 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	// Nonce check
 
 	// Validate target coin address and get CLI command prefix
-	var cliCmd string
 	var validateCmd *exec.Cmd
 	var balanceCmd *exec.Cmd
 	var sendCmd *exec.Cmd
@@ -373,14 +382,16 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("Redeem request for", req.Coin, "to address:", targetAddress)
 
-	var quoteStr string
+	cliCmd, ok := cliMap[req.Coin]
+	if !ok {
+		http.Error(w, "Unsupported coin", http.StatusBadRequest)
+		return
+	}
 	switch req.Coin {
 	case "veco":
-		cliCmd = "veco-cli"
 		validateCmd = exec.Command(cliCmd, "validateaddress", targetAddress)
 		balanceCmd = exec.Command(cliCmd, "getbalance")
 	case "ltc":
-		cliCmd = "electrum-ltc"
 		validateCmd = exec.Command(cliCmd, "validateaddress", targetAddress)
 		balanceCmd = exec.Command(cliCmd, "getbalance")
 	default:
@@ -417,22 +428,6 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid target address", http.StatusBadRequest)
 			return
 		}
-	}
-
-	switch req.Coin {
-	case "veco":
-		quoteStr = os.Getenv("CARP_REDEEM_QUOTE")
-		if quoteStr == "" {
-			quoteStr = "1000"
-		}
-	case "ltc":
-		quoteStr = os.Getenv("CARP_REDEEM_QUOTE_LTC")
-		if quoteStr == "" {
-			quoteStr = "71000000"
-		}
-	default:
-		http.Error(w, "Unsupported coin", http.StatusBadRequest)
-		return
 	}
 
 	quote, err := strconv.ParseFloat(quoteStr, 64)
