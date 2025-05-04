@@ -35,7 +35,7 @@ func main() {
 	flag.Parse()
 
 	if *privB64 == "" || *carpAddr == "" || *targetAddr == "" || *amount <= 0 {
-		fmt.Println("Usage: sign_redeem_veco -priv <privkey> -ca <CARP address> -target <Target address> -amount <CARP> [-nonce <n>] [-coin <coin>]")
+		fmt.Println("Usage: sign_redeem -priv <privkey> -Ca <CARP address> -target <Target address> -amount <CARP> [-nonce <n>] [-coin <coin>]")
 		os.Exit(1)
 	}
 
@@ -49,7 +49,7 @@ func main() {
 	pubB64 := base64.StdEncoding.EncodeToString(pubKey)
 
 	// Build redeem request
-	message := fmt.Sprintf("%d|%s|%s", *amount, *carpAddr, *targetAddr)
+	message := fmt.Sprintf("%d|%s|%s", *amount, *carpAddr, *coin)
 	sig := ed25519.Sign(privKey, []byte(message))
 	sigB64 := base64.StdEncoding.EncodeToString(sig)
 
