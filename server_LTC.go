@@ -108,6 +108,10 @@ func handleSendToMempool(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
+	if tx.Tx.Amount <= 0 {
+		http.Error(w, "Amount must be positive", http.StatusBadRequest)
+		return
+	}
 	pubKeyBytes, err := base64.StdEncoding.DecodeString(tx.PubKey)
 	if err != nil || len(pubKeyBytes) != ed25519.PublicKeySize {
 		http.Error(w, "Invalid public key", http.StatusBadRequest)
@@ -229,6 +233,10 @@ func handleMultiSendToMempool(w http.ResponseWriter, r *http.Request) {
 			results = append(results, fmt.Sprintf("tx[%d]: unauthorized mint", i))
 			continue
 		}
+		if tx.Tx.Amount <= 0 {
+			results = append(results, fmt.Sprintf("tx[%d]: amount must be positive", i))
+			continue
+		}
 		if tx.Tx.Hash == "" {
 			tx.Tx.Hash = app.ComputeTxHash(tx.Tx)
 		}
@@ -280,6 +288,11 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	}
 	req := payload.RedeemRequest
 	burnTx := payload.BurnTx
+
+	if req.AmountCarp <= 0 {
+		http.Error(w, "Redeem amount must be positive", http.StatusBadRequest)
+		return
+	}
 
 	// Prepare redeem quote
 	var quoteStr string
@@ -341,6 +354,10 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	expectedType := fmt.Sprintf("redeem:%s", req.TargetAddress)
 	if !strings.HasPrefix(burnTx.Tx.Type, "redeem:") || burnTx.Tx.From != req.CarpAddress || burnTx.Tx.To != "burn" || burnTx.Tx.Amount != req.AmountCarp {
 		http.Error(w, "Burn TX does not match redeem request", http.StatusBadRequest)
+		return
+	}
+	if burnTx.Tx.Amount <= 0 {
+		http.Error(w, "Burn TX amount must be positive", http.StatusBadRequest)
 		return
 	}
 	// Additionally verify the redeem coin address inside the type
