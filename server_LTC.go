@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -262,8 +263,17 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var cliMap = map[string]string{
+		"veco": "veco-cli",
+		"ltc":  "electrum-ltc",
+	}
 	req := payload.RedeemRequest
 	burnTx := payload.BurnTx
+	cliCmd, ok := cliMap[req.Coin]
+	if !ok {
+		http.Error(w, "Unsupported coin", http.StatusBadRequest)
+		return
+	}
 
 	// Check supported coin
 	supportedCoins := map[string]bool{
@@ -355,7 +365,13 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	var validateCmd *exec.Cmd
 	var balanceCmd *exec.Cmd
 	var sendCmd *exec.Cmd
-	var targetAddress = req.TargetAddress
+	targetAddress := req.TargetAddress
+	if !isSafeAddress(targetAddress) {
+		http.Error(w, "Suspicious target address format", http.StatusBadRequest)
+		log.Println("⚠️ Suspicious address format rejected:", targetAddress)
+		return
+	}
+	log.Println("Redeem request for", req.Coin, "to address:", targetAddress)
 
 	var quoteStr string
 	switch req.Coin {
@@ -544,6 +560,7 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	}
 	sendOutput, err := sendCmd.CombinedOutput()
 	if err != nil {
+		log.Println("❌ Failed to send", fmt.Sprintf("%.8f", targetAmount), req.Coin, "to", targetAddress)
 		log.Println(req.Coin, "send error:", string(sendOutput))
 		http.Error(w, "Failed to send target coin", http.StatusInternalServerError)
 		return
@@ -551,6 +568,7 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 
 	txid := strings.TrimSpace(string(sendOutput))
 
+	log.Println("✅ Sent", fmt.Sprintf("%.8f", targetAmount), req.Coin, "to", targetAddress, "TXID:", txid)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":                         "success",
@@ -563,4 +581,9 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 func mustDecodeB64(s string) []byte {
 	b, _ := base64.StdEncoding.DecodeString(s)
 	return b
+}
+
+func isSafeAddress(address string) bool {
+	// Only allow alphanumeric characters, 26–42 characters long (typical for BTC/LTC addresses)
+	return regexp.MustCompile(`^[a-zA-Z0-9]{26,42}$`).MatchString(address)
 }
