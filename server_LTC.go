@@ -318,7 +318,7 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify redeem request signature
-	message := fmt.Sprintf("%d|%s|%s", req.AmountCarp, req.CarpAddress, req.Coin)
+	message := fmt.Sprintf("%d|%s|%s", req.AmountCarp, req.CarpAddress, req.TargetAddress)
 	if !ed25519.Verify(pubKeyBytes, []byte(message), mustDecodeB64(req.Signature)) {
 		http.Error(w, "Invalid redeem signature", http.StatusBadRequest)
 		return
