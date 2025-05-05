@@ -304,6 +304,7 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 			quoteStr = "1000"
 		}
 	case "ltc":
+		godotenv.Overload(".env.ltc_price") // Load latest price data
 		quoteStr = os.Getenv("CARP_REDEEM_QUOTE_LTC")
 		if quoteStr == "" {
 			quoteStr = "71000000"
@@ -621,6 +622,7 @@ func handleRate(w http.ResponseWriter, r *http.Request) {
 			rate = "1000"
 		}
 	case "ltc":
+		godotenv.Overload(".env.ltc_price") // Load latest price data
 		rate = os.Getenv("CARP_REDEEM_QUOTE_LTC")
 		if rate == "" {
 			rate = "71000000"
