@@ -54,6 +54,7 @@ func main() {
 	http.HandleFunc("/blocks", withCORS(handleBlocks))
 	http.HandleFunc("/send-multi", withCORS(handleMultiSendToMempool))
 	http.HandleFunc("/redeem", withCORS(handleRedeem))
+	http.HandleFunc("/rate", withCORS(handleRate))
 
 	fmt.Println("🌐 CARP Chain API running at http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -607,6 +608,31 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 		"carp_burned":                    req.AmountCarp,
 		fmt.Sprintf("%s_sent", req.Coin): fmt.Sprintf("%.8f", targetAmount),
 		fmt.Sprintf("%s_txid", req.Coin): txid,
+	})
+}
+
+func handleRate(w http.ResponseWriter, r *http.Request) {
+	coin := r.URL.Query().Get("coin")
+	var rate string
+	switch coin {
+	case "veco":
+		rate = os.Getenv("CARP_REDEEM_QUOTE")
+		if rate == "" {
+			rate = "1000"
+		}
+	case "ltc":
+		rate = os.Getenv("CARP_REDEEM_QUOTE_LTC")
+		if rate == "" {
+			rate = "71000000"
+		}
+	default:
+		http.Error(w, "Unsupported coin", http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"coin":  coin,
+		"quote": rate,
 	})
 }
 
