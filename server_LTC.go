@@ -307,7 +307,7 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 		godotenv.Overload(".env.ltc_price") // Load latest price data
 		quoteStr = os.Getenv("CARP_REDEEM_QUOTE_LTC")
 		if quoteStr == "" {
-			quoteStr = "71000000"
+			quoteStr = "75000000"
 		}
 	}
 
@@ -392,7 +392,7 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 		ltcQuote, _ := strconv.ParseFloat(quoteStr, 64)
 		ltcMinStr := os.Getenv("CARP_REDEEM_MIN_LTC")
 		if ltcMinStr == "" {
-			ltcMinStr = "0.00001"
+			ltcMinStr = "0.0001"
 		}
 		ltcMin, _ := strconv.ParseFloat(ltcMinStr, 64)
 		minRequired := int64(math.Ceil(ltcMin * ltcQuote))

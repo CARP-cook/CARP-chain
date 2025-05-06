@@ -1,3 +1,4 @@
+// redeem_veco.go – CLI tool to create a redeem request and signed burn TX (Type: redeem:<Target Address>)
 package main
 
 import (
@@ -7,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 )
 
@@ -100,25 +100,4 @@ func main() {
 
 	out, _ := json.MarshalIndent(payload, "", "  ")
 	fmt.Println(string(out))
-}
-
-func handleRedeem(req RedeemRequest, burnTx app.SignedTx) error {
-	pubKeyBytes, err := base64.StdEncoding.DecodeString(req.PubKey)
-	log.Println("📥 Incoming redeem pubkey (b64):", req.PubKey)
-	log.Println("🔎 Decoded pubkey length:", len(pubKeyBytes), "expected:", ed25519.PublicKeySize)
-	log.Println("🧬 Decoded pubkey (hex):", fmt.Sprintf("%x", pubKeyBytes))
-	if err != nil || len(pubKeyBytes) != ed25519.PublicKeySize {
-		return fmt.Errorf("invalid redeem pubkey")
-	}
-
-	burnPubKeyBytes, err := base64.StdEncoding.DecodeString(burnTx.PubKey)
-	log.Println("📥 Incoming burnTx pubkey (b64):", burnTx.PubKey)
-	log.Println("🔎 Decoded pubkey length:", len(burnPubKeyBytes), "expected:", ed25519.PublicKeySize)
-	log.Println("🧬 Decoded pubkey (hex):", fmt.Sprintf("%x", burnPubKeyBytes))
-	if err != nil || len(burnPubKeyBytes) != ed25519.PublicKeySize {
-		return fmt.Errorf("invalid burnTx pubkey")
-	}
-
-	// ... rest of the function ...
-	return nil
 }
