@@ -644,6 +644,5 @@ func mustDecodeB64(s string) []byte {
 }
 
 func isSafeAddress(address string) bool {
-	// Only allow alphanumeric characters, 26–42 characters long (typical for BTC/LTC addresses)
-	return regexp.MustCompile(`^[a-zA-Z0-9]{26,42}$`).MatchString(address)
+	return regexp.MustCompile(`^[a-zA-Z0-9]+$`).MatchString(address)
 }
