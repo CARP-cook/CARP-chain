@@ -483,10 +483,29 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to check target coin balance", http.StatusInternalServerError)
 		return
 	}
-	targetBalance, err := strconv.ParseFloat(string(bytes.TrimSpace(balanceOutput)), 64)
-	if err != nil {
-		http.Error(w, "Invalid target coin balance format", http.StatusInternalServerError)
-		return
+	var targetBalance float64
+	if req.Coin == "ltc" {
+		var balanceJSON map[string]interface{}
+		if err := json.Unmarshal(balanceOutput, &balanceJSON); err != nil {
+			http.Error(w, "Invalid JSON in target coin balance", http.StatusInternalServerError)
+			return
+		}
+		confirmedStr, ok := balanceJSON["confirmed"].(string)
+		if !ok {
+			http.Error(w, "Missing 'confirmed' field in balance", http.StatusInternalServerError)
+			return
+		}
+		targetBalance, err = strconv.ParseFloat(confirmedStr, 64)
+		if err != nil {
+			http.Error(w, "Invalid 'confirmed' balance format", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		targetBalance, err = strconv.ParseFloat(string(bytes.TrimSpace(balanceOutput)), 64)
+		if err != nil {
+			http.Error(w, "Invalid target coin balance format", http.StatusInternalServerError)
+			return
+		}
 	}
 	if targetBalance < targetAmount {
 		http.Error(w, fmt.Sprintf("Insufficient %s balance: available %.8f, needed %.8f", req.Coin, targetBalance, targetAmount), http.StatusPaymentRequired)
