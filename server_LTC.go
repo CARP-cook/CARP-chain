@@ -607,19 +607,36 @@ func handleRedeem(w http.ResponseWriter, r *http.Request) {
 	os.WriteFile(usedTxsFile, updated, 0644)
 
 	// 2. Send target coin
-	sendCmd = exec.Command(cliCmd, "sendtoaddress", targetAddress, fmt.Sprintf("%.8f", targetAmount))
+	var txid string
 	if req.Coin == "ltc" {
-		sendCmd = exec.Command(cliCmd, "payto", targetAddress, fmt.Sprintf("%.8f", targetAmount))
+		// LTC: 2-step: payto → broadcast
+		paytoCmd := exec.Command(cliCmd, "payto", targetAddress, fmt.Sprintf("%.8f", targetAmount))
+		unsignedTxBytes, err := paytoCmd.CombinedOutput()
+		if err != nil {
+			log.Println("❌ Failed to generate unsigned LTC TX:", string(unsignedTxBytes))
+			http.Error(w, "Failed to create LTC transaction", http.StatusInternalServerError)
+			return
+		}
+		broadcastCmd := exec.Command(cliCmd, "broadcast", string(bytes.TrimSpace(unsignedTxBytes)))
+		sendOutput, err := broadcastCmd.CombinedOutput()
+		if err != nil {
+			log.Println("❌ Failed to broadcast LTC TX:", string(sendOutput))
+			http.Error(w, "Failed to broadcast LTC transaction", http.StatusInternalServerError)
+			return
+		}
+		txid = strings.TrimSpace(string(sendOutput))
+	} else {
+		// VECO: use sendtoaddress as before
+		sendCmd = exec.Command(cliCmd, "sendtoaddress", targetAddress, fmt.Sprintf("%.8f", targetAmount))
+		sendOutput, err := sendCmd.CombinedOutput()
+		if err != nil {
+			log.Println("❌ Failed to send", fmt.Sprintf("%.8f", targetAmount), req.Coin, "to", targetAddress)
+			log.Println(req.Coin, "send error:", string(sendOutput))
+			http.Error(w, "Failed to send target coin", http.StatusInternalServerError)
+			return
+		}
+		txid = strings.TrimSpace(string(sendOutput))
 	}
-	sendOutput, err := sendCmd.CombinedOutput()
-	if err != nil {
-		log.Println("❌ Failed to send", fmt.Sprintf("%.8f", targetAmount), req.Coin, "to", targetAddress)
-		log.Println(req.Coin, "send error:", string(sendOutput))
-		http.Error(w, "Failed to send target coin", http.StatusInternalServerError)
-		return
-	}
-
-	txid := strings.TrimSpace(string(sendOutput))
 
 	log.Println("✅ Sent", fmt.Sprintf("%.8f", targetAmount), req.Coin, "to", targetAddress, "TXID:", txid)
 	w.Header().Set("Content-Type", "application/json")
